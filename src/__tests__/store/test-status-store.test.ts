@@ -232,4 +232,39 @@ describe('TestStatusStore', () => {
       assert.equal(result!.failureReason, undefined);
     });
   });
+
+  describe('recordBatch', () => {
+    it('should record multiple results in one operation', async () => {
+      const results = await store.recordBatch('my-app', [
+        { testId: 'TC-A', passed: true },
+        { testId: 'TC-B', passed: false },
+        { testId: 'TC-C', passed: true },
+      ]);
+
+      assert.equal(results.length, 3);
+      assert.equal(results[0].id, 'TC-A');
+      assert.equal(results[0].runHistory[0], true);
+      assert.equal(results[1].id, 'TC-B');
+      assert.equal(results[1].runHistory[0], false);
+      assert.equal(results[2].id, 'TC-C');
+      assert.equal(results[2].runHistory[0], true);
+
+      // Verify all persisted in one file
+      const loaded = await store.load('my-app');
+      assert.equal(loaded.length, 3);
+    });
+
+    it('should update existing entries in batch', async () => {
+      await store.recordRun('my-app', 'TC-X', true);
+      const results = await store.recordBatch('my-app', [
+        { testId: 'TC-X', passed: false },
+        { testId: 'TC-Y', passed: true },
+      ]);
+
+      assert.equal(results[0].id, 'TC-X');
+      assert.deepEqual(results[0].runHistory, [true, false]);
+      assert.equal(results[1].id, 'TC-Y');
+      assert.deepEqual(results[1].runHistory, [true]);
+    });
+  });
 });

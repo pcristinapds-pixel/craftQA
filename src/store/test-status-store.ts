@@ -52,47 +52,65 @@ export class TestStatusStore {
   }
 
   async recordRun(appId: string, testId: string, passed: boolean): Promise<TestStatus> {
+    const results = await this.recordBatch(appId, [{ testId, passed }]);
+    return results[0];
+  }
+
+  /**
+   * Record multiple test results in a single file I/O operation.
+   * More efficient than calling recordRun() in a loop.
+   */
+  async recordBatch(
+    appId: string,
+    results: Array<{ testId: string; passed: boolean }>,
+  ): Promise<TestStatus[]> {
     const statuses = await this.load(appId);
-    let entry = statuses.find((s) => s.id === testId);
+    const updated: TestStatus[] = [];
 
-    if (!entry) {
-      entry = {
-        id: testId,
-        status: 'new',
-        passRate: 0,
-        runHistory: [],
-        lastRun: new Date().toISOString(),
-      };
-      statuses.push(entry);
-    }
+    for (const { testId, passed } of results) {
+      let entry = statuses.find((s) => s.id === testId);
 
-    // Append result, keep last 5
-    entry.runHistory.push(passed);
-    if (entry.runHistory.length > 5) {
-      entry.runHistory = entry.runHistory.slice(-5);
-    }
-
-    entry.lastRun = new Date().toISOString();
-
-    // Calculate pass rate
-    const passes = entry.runHistory.filter(Boolean).length;
-    entry.passRate = passes / entry.runHistory.length;
-
-    // Promote/demote only when 5 runs accumulated
-    if (entry.runHistory.length === 5) {
-      if (passes === 5) {
-        entry.status = 'stable';
-        delete entry.failureReason;
-      } else if (passes >= 3) {
-        entry.status = 'quarantine';
-        entry.failureReason = entry.failureReason ?? 'Intermittent failure';
-      } else {
-        entry.status = 'rejected';
-        entry.failureReason = entry.failureReason ?? 'Consistent failure';
+      if (!entry) {
+        entry = {
+          id: testId,
+          status: 'new',
+          passRate: 0,
+          runHistory: [],
+          lastRun: new Date().toISOString(),
+        };
+        statuses.push(entry);
       }
+
+      // Append result, keep last 5
+      entry.runHistory.push(passed);
+      if (entry.runHistory.length > 5) {
+        entry.runHistory = entry.runHistory.slice(-5);
+      }
+
+      entry.lastRun = new Date().toISOString();
+
+      // Calculate pass rate
+      const passes = entry.runHistory.filter(Boolean).length;
+      entry.passRate = passes / entry.runHistory.length;
+
+      // Promote/demote only when 5 runs accumulated
+      if (entry.runHistory.length === 5) {
+        if (passes === 5) {
+          entry.status = 'stable';
+          delete entry.failureReason;
+        } else if (passes >= 3) {
+          entry.status = 'quarantine';
+          entry.failureReason = entry.failureReason ?? 'Intermittent failure';
+        } else {
+          entry.status = 'rejected';
+          entry.failureReason = entry.failureReason ?? 'Consistent failure';
+        }
+      }
+
+      updated.push(entry);
     }
 
     await this.save(appId, statuses);
-    return entry;
+    return updated;
   }
 }

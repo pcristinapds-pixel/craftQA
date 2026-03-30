@@ -47,17 +47,17 @@
   - [x] 테스트 추가
 
 ### 0-4. 재활용 모듈 품질 개선 (코드 리뷰 H-02 ~ H-05)
-- [ ] `yaml-loader.ts` — Zod 스키마 검증 통합
-  - [ ] `loadYaml<T>(path, schema)` 시그니처로 변경
-  - [ ] 호출처 업데이트 (registry, event-spec, test-status-store)
-- [ ] `test-status-store.ts` — `recordBatch()` 메서드 추가
-  - [ ] N개 결과를 1회 파일 I/O로 기록
-  - [ ] 기존 `recordRun()` 유지 (단건용)
-  - [ ] 테스트 추가
-- [ ] Runner 공통 인터페이스 정의
-  - [ ] `UnifiedRunResult` 타입 생성
-  - [ ] Playwright, Maestro/Patrol 양쪽에서 구현
-- [ ] Event capture — "not yet implemented" 경고 반환 (또는 실제 구현)
+- [x] `yaml-loader.ts` — Zod 스키마 검증 통합
+  - [x] `loadYaml<T>(path, schema)` 시그니처로 변경 (선택적 schema 파라미터)
+  - [ ] 호출처 업데이트 (registry, event-spec — 스키마 정의 후 적용)
+- [x] `test-status-store.ts` — `recordBatch()` 메서드 추가
+  - [x] N개 결과를 1회 파일 I/O로 기록
+  - [x] 기존 `recordRun()` 유지 (recordBatch 위임)
+  - [x] 테스트 추가
+- [x] Runner 공통 인터페이스 정의
+  - [x] `UnifiedRunResult` 타입 생성 (`src/types/runner.ts`)
+  - [ ] Playwright, Maestro/Patrol 양쪽에서 구현 (러너 통합 시 적용)
+- [ ] Event capture — "not yet implemented" 경고 반환 (러너 통합 시 구현)
 
 ### 0-5. 문서 및 설정 업데이트
 - [x] `CLAUDE.md` 업데이트
