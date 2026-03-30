@@ -72,28 +72,28 @@
 ## 1단계: CLI 트리거 + Analyzer
 
 ### 1-1. 새 진입점 (`src/index.ts`)
-- [ ] 에이전트 메인 엔트리포인트 생성
-- [ ] CLI 파서 구현 (인자: `--app`, `--pr`, `--base-branch`, `--diff`, `--validate-events`, `--prd`)
-- [ ] `AgentConfig` 인터페이스 정의
-- [ ] `npx sentinel-qa run` 으로 실행 가능하도록 `bin` 등록
-- [ ] `--help` 출력
+- [x] 에이전트 메인 엔트리포인트 생성
+- [x] CLI 파서 구현 (인자: `--app`, `--pr`, `--base-branch`, `--diff`, `--validate-events`, `--prd`)
+- [x] `AgentConfig` 인터페이스 정의
+- [x] `npx sentinel-qa run` 으로 실행 가능하도록 `bin` 등록
+- [x] `--help` 출력
 
 ### 1-2. Analyzer (`src/agent/analyzer.ts`)
-- [ ] `AnalysisContext` 인터페이스 정의
-- [ ] `git diff <baseBranch>...HEAD` 실행 → diff 문자열 수집
-- [ ] PRD 파일 로드 (Markdown 읽기)
-- [ ] AppRegistry에서 앱 정보 조회
-- [ ] 셀렉터 로드
-- [ ] 이벤트 스펙 로드 (선택)
-- [ ] 기존 테스트 상태 로드 (quarantine 정보)
-- [ ] 테스트 작성
+- [x] `AnalysisContext` 인터페이스 정의
+- [x] `git diff <baseBranch>...HEAD` 실행 → diff 문자열 수집
+- [x] PRD 파일 로드 (Markdown 읽기)
+- [x] AppRegistry에서 앱 정보 조회
+- [x] 셀렉터 로드
+- [x] 이벤트 스펙 로드 (선택)
+- [x] 기존 테스트 상태 로드 (quarantine 정보)
+- [x] 테스트 작성
 
 ### 1-3. 설정 파일 (`sentinel-qa.config.yaml`)
-- [ ] 설정 스키마 Zod 정의 (anthropic, slack, github, test, cost 섹션)
-- [ ] 설정 로더 구현 (파일 + 환경 변수 오버라이드)
-- [ ] 기본값 처리
-- [ ] `confidence_threshold` 설정 포함
-- [ ] `cost.track_tokens`, `cost.max_tokens_per_run` 설정 포함
+- [x] 설정 스키마 Zod 정의 (anthropic, slack, github, test, cost 섹션)
+- [x] 설정 로더 구현 (파일 + 환경 변수 오버라이드)
+- [x] 기본값 처리
+- [x] `confidence_threshold` 설정 포함
+- [x] `cost.track_tokens`, `cost.max_tokens_per_run` 설정 포함
 
 ---
 
