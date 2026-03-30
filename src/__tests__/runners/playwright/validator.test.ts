@@ -65,7 +65,7 @@ import { test } from '@playwright/test';
 `;
     const result = validateTestCode(code);
     assert.equal(result.valid, false);
-    assert.ok(result.errors.some((e) => e.includes('fs module')));
+    assert.ok(result.errors.some((e) => e.includes('"fs"')));
   });
 
   it('should reject fs/promises import', () => {
@@ -112,7 +112,7 @@ import net from 'node:net';
 `;
     const result = validateTestCode(code);
     assert.equal(result.valid, false);
-    assert.ok(result.errors.some((e) => e.includes('net module')));
+    assert.ok(result.errors.some((e) => e.includes('"node:net"')));
   });
 
   it('should reject vm module', () => {
@@ -121,7 +121,7 @@ import { runInNewContext } from 'node:vm';
 `;
     const result = validateTestCode(code);
     assert.equal(result.valid, false);
-    assert.ok(result.errors.some((e) => e.includes('vm module')));
+    assert.ok(result.errors.some((e) => e.includes('"node:vm"')));
   });
 
   it('should reject worker_threads module', () => {
@@ -130,7 +130,7 @@ import { Worker } from 'worker_threads';
 `;
     const result = validateTestCode(code);
     assert.equal(result.valid, false);
-    assert.ok(result.errors.some((e) => e.includes('worker_threads')));
+    assert.ok(result.errors.some((e) => e.includes('"worker_threads"')));
   });
 
   it('should reject non-playwright imports', () => {
@@ -182,5 +182,37 @@ test('bad', async () => { process.kill(process.pid); });
     const result = validateTestCode(code);
     assert.equal(result.valid, false);
     assert.ok(result.errors.some((e) => e.includes('process.kill()')));
+  });
+
+  // ── New AST-specific tests (bypass prevention) ──
+
+  it('should reject globalThis dynamic property access', () => {
+    const code = `
+import { test } from '@playwright/test';
+test('bad', async () => { globalThis['ev' + 'al']('malicious'); });
+`;
+    const result = validateTestCode(code);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes('globalThis')));
+  });
+
+  it('should reject process dynamic property access', () => {
+    const code = `
+import { test } from '@playwright/test';
+test('bad', async () => { const e = process['en' + 'v']; });
+`;
+    const result = validateTestCode(code);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes('process')));
+  });
+
+  it('should reject global dynamic property access', () => {
+    const code = `
+import { test } from '@playwright/test';
+test('bad', async () => { global['eval']('x'); });
+`;
+    const result = validateTestCode(code);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some((e) => e.includes('global')));
   });
 });

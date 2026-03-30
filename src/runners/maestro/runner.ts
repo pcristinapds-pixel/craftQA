@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { parseMaestroResult } from './parser.js';
+import { sanitizeId, assertWithinDir } from '../../utils/sanitize.js';
 import type {
   MaestroTestInput,
   MaestroRunOptions,
@@ -46,7 +47,9 @@ export async function runMaestroTests(
     // Write YAML files to temp directory
     const yamlFiles: { input: MaestroTestInput; filePath: string }[] = [];
     for (const test of tests) {
-      const filePath = join(tempDir, `${test.id}.yaml`);
+      const safeId = sanitizeId(test.id);
+      const filePath = join(tempDir, `${safeId}.yaml`);
+      assertWithinDir(filePath, tempDir);
       await writeFile(filePath, test.yaml, 'utf-8');
       yamlFiles.push({ input: test, filePath });
     }

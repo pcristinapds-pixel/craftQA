@@ -36,15 +36,15 @@
 - [x] `bin` 엔트리 및 `postbuild` shebang 스크립트 정리
 
 ### 0-3. 보안 이슈 수정 (코드 리뷰 C-01, C-02)
-- [ ] Playwright `validator.ts` — AST 기반 검증으로 강화
-  - [ ] TypeScript Compiler API로 CallExpression, ImportDeclaration 검사
-  - [ ] 허용 모듈 화이트리스트 (`@playwright/test` 등)
-  - [ ] `globalThis[...]` 동적 접근 패턴 차단
-  - [ ] 기존 정규식 테스트를 AST 기반으로 마이그레이션
-- [ ] Maestro/Patrol runner — `test.id` path traversal 방지
-  - [ ] `sanitizeId()` 함수 추가 (알파벳/숫자/하이픈/언더스코어만 허용)
-  - [ ] 결과 경로가 tempDir 내부인지 검증
-  - [ ] 테스트 추가
+- [x] Playwright `validator.ts` — AST 기반 검증으로 강화
+  - [x] TypeScript Compiler API로 CallExpression, ImportDeclaration 검사
+  - [x] 허용 모듈 화이트리스트 (`@playwright/test` 등)
+  - [x] `globalThis[...]` 동적 접근 패턴 차단
+  - [x] 기존 정규식 테스트를 AST 기반으로 마이그레이션
+- [x] Maestro/Patrol runner — `test.id` path traversal 방지
+  - [x] `sanitizeId()` 함수 추가 (알파벳/숫자/하이픈/언더스코어만 허용)
+  - [x] 결과 경로가 tempDir 내부인지 검증
+  - [x] 테스트 추가
 
 ### 0-4. 재활용 모듈 품질 개선 (코드 리뷰 H-02 ~ H-05)
 - [ ] `yaml-loader.ts` — Zod 스키마 검증 통합
