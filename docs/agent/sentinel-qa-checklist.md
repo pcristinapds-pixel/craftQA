@@ -100,33 +100,33 @@
 ## 2단계: Planner (Claude API)
 
 ### 2-1. LLM 인터페이스 (`src/agent/llm-client.ts`)
-- [ ] `LLMClient` 인터페이스 정의 (`generateTests`, `critiqueTests`)
-- [ ] `ClaudeLLMClient` 구현
-- [ ] `@anthropic-ai/sdk` 설치 및 클라이언트 초기화
-- [ ] 토큰 사용량 로깅 (input/output tokens per call)
-- [ ] `max_tokens_per_run` 초과 시 중단 로직
+- [x] `LLMClient` 인터페이스 정의 (`call`, `getTotalUsage`)
+- [x] `ClaudeLLMClient` 구현
+- [x] `@anthropic-ai/sdk` 설치 및 클라이언트 초기화
+- [x] 토큰 사용량 로깅 (input/output tokens per call)
+- [x] `max_tokens_per_run` 초과 시 중단 로직
 
 ### 2-2. Planner (`src/agent/planner.ts`)
-- [ ] `PlannedTest` 인터페이스 정의
-- [ ] 시스템 프롬프트 작성
-  - [ ] 역할 정의 (시니어 QA 엔지니어)
-  - [ ] 코드 생성 규칙 (셀렉터 사용, 독립 테스트, 보안 제약)
-  - [ ] **smart wait 규칙** (`waitForSelector` 필수, `waitForTimeout` 금지)
-  - [ ] **retry-friendly 패턴** (`expect().toBeVisible()` 등 auto-retry assertion 우선)
-  - [ ] 출력 형식 (JSON 배열)
-  - [ ] **few-shot 예제** (Playwright 올바른 테스트 2-3개)
-- [ ] 유저 프롬프트 조립 (PRD + diff + selectors + event specs)
-- [ ] **기존 stable 테스트 목록 포함** → 중복 생성 방지
-- [ ] Claude API 호출 → JSON 응답 파싱
-- [ ] 응답 Zod 검증 (`PlannedTest[]`)
-- [ ] **Self-critique 단계** — 생성 코드를 Claude가 재검토 (셀렉터 오용, 누락 assertion, 보안 위반)
-- [ ] 에러 핸들링 (API 실패, 파싱 실패, 빈 응답)
-- [ ] 테스트 작성 (모킹된 API 응답)
+- [x] `PlannedTest` 인터페이스 정의
+- [x] 시스템 프롬프트 작성
+  - [x] 역할 정의 (시니어 QA 엔지니어)
+  - [x] 코드 생성 규칙 (셀렉터 사용, 독립 테스트, 보안 제약)
+  - [x] **smart wait 규칙** (`waitForSelector` 필수, `waitForTimeout` 금지)
+  - [x] **retry-friendly 패턴** (`expect().toBeVisible()` 등 auto-retry assertion 우선)
+  - [x] 출력 형식 (JSON 배열)
+  - [x] **few-shot 예제** (Playwright 올바른 테스트 2개)
+- [x] 유저 프롬프트 조립 (PRD + diff + selectors + event specs)
+- [x] **기존 stable 테스트 목록 포함** → 중복 생성 방지
+- [x] Claude API 호출 → JSON 응답 파싱
+- [x] 응답 Zod 검증 (`PlannedTest[]`)
+- [x] **Self-critique 단계** — 생성 코드를 Claude가 재검토 (셀렉터 오용, 누락 assertion, 보안 위반)
+- [x] 에러 핸들링 (API 실패, 파싱 실패, 빈 응답)
+- [x] 테스트 작성 (모킹된 API 응답)
 
 ### 2-3. 프롬프트 템플릿
-- [ ] Playwright 코드 생성용 프롬프트 + few-shot 예제
-- [ ] Patrol 코드 생성용 프롬프트 + few-shot 예제
-- [ ] diff 기반 TC vs PRD 기반 TC 구분 로직
+- [x] Playwright 코드 생성용 프롬프트 + few-shot 예제
+- [x] Patrol 코드 생성용 프롬프트 (few-shot은 Patrol 러너 단계에서 추가)
+- [x] diff 기반 TC vs PRD 기반 TC 구분 로직 (trigger 필드로 구분)
 
 ---
 
