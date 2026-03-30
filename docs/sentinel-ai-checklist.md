@@ -1,4 +1,7 @@
-# sentinel-qa 개발 체크리스트
+# [ARCHIVED] sentinel-qa 개발 체크리스트
+
+> **⚠️ 이 문서는 아카이브되었습니다.** MCP 서버 기반 체크리스트는 에이전트 아키텍처로 대체되었습니다.
+> 최신 체크리스트: `docs/agent/sentinel-qa-checklist.md`
 
 > 기준 문서: `docs/sentinel-qa-planning.md`
 > 생성일: 2026-03-14

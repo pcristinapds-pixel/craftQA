@@ -1,4 +1,8 @@
-# sentinel-qa 프로젝트 기획 정리
+# [ARCHIVED] sentinel-qa 프로젝트 기획 정리
+
+> **⚠️ 이 문서는 아카이브되었습니다.** MCP 서버 기반 설계는 에이전트 아키텍처로 대체되었습니다.
+> 최신 기획: `docs/agent/sentinel-qa-agent-prd.md`
+> 최신 체크리스트: `docs/agent/sentinel-qa-checklist.md`
 
 > 논의 일자: 2026-03-14
 > 목적: PRD 기반 QA 자동화 인프라 설계 및 pilot-ai 연동 계획

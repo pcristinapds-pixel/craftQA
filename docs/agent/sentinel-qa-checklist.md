@@ -65,7 +65,7 @@
   - [x] 단일 패키지 구조 반영
   - [x] 새 빌드/테스트 커맨드 반영
   - [x] 워크플로우 6단계로 업데이트 (개발→빌드→코드리뷰→테스트→체크리스트→커밋)
-- [ ] 기존 `docs/sentinel-ai-planning.md`, `docs/sentinel-ai-checklist.md` 아카이브 표시
+- [x] 기존 `docs/sentinel-ai-planning.md`, `docs/sentinel-ai-checklist.md` 아카이브 표시
 
 ---
 
