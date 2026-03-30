@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - packages/playwright-runner/**
-      - packages/mcp-server/**
+      - src/runners/playwright/**
+      - src/__tests__/runners/playwright/**
   pull_request:
     paths:
-      - packages/playwright-runner/**
-      - packages/mcp-server/**
+      - src/runners/playwright/**
+      - src/__tests__/runners/playwright/**
 
 env:
   CI: true
@@ -39,21 +39,4 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Run Playwright runner tests
-        run: npm run test --workspace=packages/playwright-runner
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: packages/playwright-runner/playwright-report/
-          retention-days: 30
-
-      - name: Upload screenshots and traces on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-traces
-          path: |
-            packages/playwright-runner/test-results/
-          retention-days: 30
+        run: node --test dist/__tests__/runners/playwright/*.test.js

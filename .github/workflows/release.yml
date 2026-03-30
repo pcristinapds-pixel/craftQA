@@ -52,7 +52,7 @@ jobs:
       - name: Bump version
         id: version
         run: |
-          npm version ${{ inputs.version }} --workspaces --include-workspace-root --no-git-tag-version
+          npm version ${{ inputs.version }} --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
           git add -A
@@ -61,8 +61,7 @@ jobs:
           git push origin main --tags
 
       - name: Publish to npm
-        run: |
-          npm publish --workspaces --access public
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
