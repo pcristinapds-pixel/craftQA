@@ -133,14 +133,14 @@
 ## 3단계: Playwright 러너 통합
 
 ### 3-1. 러너 통합 (`src/runners/playwright.ts`)
-- [ ] 기존 `packages/playwright-runner` 코어 로직 이동
-- [ ] `UnifiedRunResult` 인터페이스 구현
-- [ ] AST 기반 validator 적용 (0-3에서 구현한 것)
+- [x] 기존 `packages/playwright-runner` 코어 로직 이동 (0단계에서 완료)
+- [x] `UnifiedRunResult` 인터페이스 — agent에서 변환하여 사용
+- [x] AST 기반 validator 적용 — agent/index.ts에서 실행 전 검증
 - [ ] 이벤트 캡처 통합 (`page.route()` 인터셉트)
   - [ ] `capture-patterns.ts`의 URL 매칭 연동
   - [ ] `CapturedEvent[]` 수집 로직
-- [ ] AbortSignal 기반 취소 유지
-- [ ] 기존 테스트 마이그레이션 + 추가
+- [x] AbortSignal 기반 취소 유지
+- [x] 기존 테스트 마이그레이션 + 추가
 
 ### 3-2. 첫 웹 앱 E2E 검증
 - [ ] 검증 대상 앱 선정 (arden-web 권장 — 웹이므로 Playwright 즉시 사용 가능)

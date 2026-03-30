@@ -13,11 +13,9 @@ describe('runCli', () => {
     assert.equal(code, 1);
   });
 
-  it('should run with --app flag', async () => {
-    // Runs against a non-existent app but should not crash
-    // Agent will fail gracefully since app is not in registry
-    const code = await runCli(['--app', 'test-app']);
-    // Returns 0 because agent skeleton returns 'passed'
-    assert.equal(code, 0);
+  it('should return 1 when app not found in registry', async () => {
+    // Agent will throw because the app is not in registry
+    const code = await runCli(['--app', 'nonexistent-app']);
+    assert.equal(code, 1);
   });
 });
