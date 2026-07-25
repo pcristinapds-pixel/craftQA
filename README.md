@@ -15,7 +15,7 @@
 
 ---
 
-> sentinel-qa contains no LLM calls. It is purely test execution infrastructure designed to be driven by an AI agent like [pilot-ai](https://github.com/eodin/pilot-ai).
+> sentinel-qa contains no LLM calls. It is purely test execution infrastructure designed to be driven by an AI agent like [pilot-ai](https://github.com/ahn283/pilot-ai).
 
 ## Architecture
 
