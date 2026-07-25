@@ -5,3 +5,4 @@ dist/
 .turbo/
 reports/
 tests/
+.DS_Store
