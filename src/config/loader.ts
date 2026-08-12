@@ -4,6 +4,7 @@ import { loadYaml } from '../utils/yaml-loader.js';
 import { sentinelConfigSchema } from '../types/config.js';
 import type { SentinelConfig } from '../types/config.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 
 const CONFIG_FILENAMES = [
   'sentinel-qa.config.yaml',
@@ -24,7 +25,7 @@ export async function loadConfig(baseDir?: string): Promise<SentinelConfig> {
     const configPath = resolve(dir, filename);
     if (existsSync(configPath)) {
       raw = await loadYaml<Record<string, unknown>>(configPath);
-      logger.info(`Loaded config from ${configPath}`);
+      logger.info(t.config.loadedFrom(configPath));
       break;
     }
   }

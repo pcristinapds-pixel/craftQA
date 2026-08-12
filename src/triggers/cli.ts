@@ -3,23 +3,27 @@ import { agentConfigSchema } from '../types/config.js';
 import { loadConfig } from '../config/loader.js';
 import { runAgent } from '../agent/index.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 
+// The flag names themselves (--app, --pr, ...) never change with the
+// language, since the user types them verbatim on the command line. Only
+// the description text next to each flag comes from the dictionary.
 function printHelp(): void {
   console.log(`
-sentinel-qa — Autonomous QA agent
+sentinel-qa — ${t.cli.description}
 
-Usage:
+${t.cli.usageLabel}
   sentinel-qa run [options]
 
-Options:
-  --app <id>              App ID from registry/apps.yaml (required)
-  --pr <number>           GitHub PR number
-  --base-branch <branch>  Base branch for diff (default: main)
-  --diff <ref>            Git diff reference (e.g., HEAD~1)
-  --validate-events       Enable data log QA
-  --prd <path>            Path to PRD file
-  --config <path>         Path to config directory
-  --help                  Show this help message
+${t.cli.optionsLabel}
+  --app <id>              ${t.cli.appOptionDescription}
+  --pr <number>           ${t.cli.prOptionDescription}
+  --base-branch <branch>  ${t.cli.baseBranchOptionDescription}
+  --diff <ref>            ${t.cli.diffOptionDescription}
+  --validate-events       ${t.cli.validateEventsOptionDescription}
+  --prd <path>            ${t.cli.prdOptionDescription}
+  --config <path>         ${t.cli.configOptionDescription}
+  --help                  ${t.cli.helpOptionDescription}
 `);
 }
 
@@ -46,7 +50,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   if (!values.app) {
-    logger.error('Missing required option: --app <id>');
+    logger.error(t.cli.missingAppOption);
     printHelp();
     return 1;
   }
@@ -68,7 +72,7 @@ export async function runCli(argv: string[]): Promise<number> {
 
     return result.status === 'passed' ? 0 : 1;
   } catch (err) {
-    logger.error('Agent failed with error:', err);
+    logger.error(t.cli.agentFailed, err);
     return 1;
   }
 }

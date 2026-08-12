@@ -8,6 +8,7 @@ import type { AgentConfig } from '../types/config.js';
 import type { AppEntry, SelectorMap, EventSpecConfig } from '../registry/types.js';
 import type { TestStatus } from '../store/test-status-store.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -34,7 +35,7 @@ export async function analyze(
   // Load app from registry
   const app = registry.getApp(config.appId);
   if (!app) {
-    throw new Error(`App "${config.appId}" not found in registry`);
+    throw new Error(t.analyzer.appNotFound(config.appId));
   }
 
   // Collect git diff
@@ -53,10 +54,13 @@ export async function analyze(
   const existingTests = await statusStore.load(config.appId);
 
   logger.info(
-    `Analysis complete: diff=${diff.length} chars, prd=${prd.length} chars, ` +
-    `selectors=${selectors ? 'loaded' : 'none'}, ` +
-    `eventSpecs=${eventSpecs ? 'loaded' : 'none'}, ` +
-    `existingTests=${existingTests.length}`,
+    t.analyzer.complete({
+      diffLength: diff.length,
+      prdLength: prd.length,
+      selectorsLoaded: selectors !== null,
+      eventSpecsLoaded: eventSpecs !== null,
+      existingTestsCount: existingTests.length,
+    }),
   );
 
   return { app, diff, prd, selectors, eventSpecs, existingTests };
@@ -72,14 +76,14 @@ async function collectDiff(config: AgentConfig): Promise<string> {
     });
     return stdout;
   } catch (err) {
-    logger.warn(`git diff failed for "${diffRef}", falling back to HEAD~1`);
+    logger.warn(t.analyzer.diffFailedFallback(diffRef));
     try {
       const { stdout } = await execFileAsync('git', ['diff', 'HEAD~1'], {
         maxBuffer: 10 * 1024 * 1024,
       });
       return stdout;
     } catch {
-      logger.warn('git diff HEAD~1 also failed, returning empty diff');
+      logger.warn(t.analyzer.diffFallbackFailed);
       return '';
     }
   }
@@ -87,12 +91,12 @@ async function collectDiff(config: AgentConfig): Promise<string> {
 
 async function loadPrd(config: AgentConfig): Promise<string> {
   if (!config.prdPath) {
-    logger.info('No PRD path specified, skipping PRD load');
+    logger.info(t.analyzer.noPrdPath);
     return '';
   }
 
   if (!existsSync(config.prdPath)) {
-    logger.warn(`PRD file not found: ${config.prdPath}`);
+    logger.warn(t.analyzer.prdFileNotFound(config.prdPath));
     return '';
   }
 

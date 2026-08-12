@@ -6,6 +6,7 @@ import { generateMarkdownReport } from './markdown.js';
 import type { ReportMeta } from './markdown.js';
 import type { EventValidationResult } from '../event-validation/types.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 
 /**
  * Manages report storage on disk.
@@ -46,7 +47,7 @@ export class ReportStore {
     }
     await writeFile(jsonPath, JSON.stringify(jsonData, null, 2), 'utf-8');
 
-    logger.info(`Report saved: ${mdPath}`);
+    logger.info(t.reportStore.saved(mdPath));
     return mdPath;
   }
 

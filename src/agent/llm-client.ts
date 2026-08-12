@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 import type { SentinelConfig } from '../types/config.js';
 
 export interface TokenUsage {
@@ -43,13 +44,10 @@ export class ClaudeLLMClient implements LLMClient {
     // Check token budget before calling
     const totalConsumed = this.totalUsage.inputTokens + this.totalUsage.outputTokens;
     if (totalConsumed >= this.maxTokensPerRun) {
-      throw new Error(
-        `Token budget exceeded: ${totalConsumed} >= ${this.maxTokensPerRun}. ` +
-        'Increase cost.max_tokens_per_run in config to continue.',
-      );
+      throw new Error(t.llmClient.tokenBudgetExceeded(totalConsumed, this.maxTokensPerRun));
     }
 
-    logger.info(`Calling Claude API (model: ${this.model})...`);
+    logger.info(t.llmClient.calling(this.model));
 
     const response = await this.client.messages.create({
       model: this.model,
@@ -67,8 +65,11 @@ export class ClaudeLLMClient implements LLMClient {
     this.totalUsage.outputTokens += usage.outputTokens;
 
     logger.info(
-      `Claude API response: ${usage.inputTokens} input + ${usage.outputTokens} output tokens ` +
-      `(total: ${this.totalUsage.inputTokens + this.totalUsage.outputTokens})`,
+      t.llmClient.response(
+        usage.inputTokens,
+        usage.outputTokens,
+        this.totalUsage.inputTokens + this.totalUsage.outputTokens,
+      ),
     );
 
     // Extract text content

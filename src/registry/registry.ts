@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { loadYaml } from '../utils/yaml-loader.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 import type { AppsConfig, AppEntry, SelectorMap, EventSpecConfig } from './types.js';
 
 export class AppRegistry {
@@ -15,13 +16,13 @@ export class AppRegistry {
   async load(): Promise<void> {
     const appsPath = resolve(this.registryDir, 'apps.yaml');
     if (!existsSync(appsPath)) {
-      logger.warn(`apps.yaml not found at ${appsPath}`);
+      logger.warn(t.registry.appsFileNotFound(appsPath));
       this.apps = [];
       return;
     }
     const config = await loadYaml<AppsConfig>(appsPath);
     this.apps = config.apps ?? [];
-    logger.info(`Loaded ${this.apps.length} app(s) from registry`);
+    logger.info(t.registry.loaded(this.apps.length));
   }
 
   listApps(): AppEntry[] {
@@ -38,7 +39,7 @@ export class AppRegistry {
 
     const selectorPath = resolve(this.registryDir, app.context.selectors);
     if (!existsSync(selectorPath)) {
-      logger.warn(`Selector file not found: ${selectorPath}`);
+      logger.warn(t.registry.selectorFileNotFound(selectorPath));
       return null;
     }
     return loadYaml<SelectorMap>(selectorPath);
@@ -50,7 +51,7 @@ export class AppRegistry {
 
     const specPath = resolve(this.registryDir, app.context.event_spec);
     if (!existsSync(specPath)) {
-      logger.warn(`Event spec file not found: ${specPath}`);
+      logger.warn(t.registry.eventSpecFileNotFound(specPath));
       return null;
     }
     return loadYaml<EventSpecConfig>(specPath);

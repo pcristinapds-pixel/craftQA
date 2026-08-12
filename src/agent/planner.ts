@@ -3,6 +3,7 @@ import type { LLMClient } from './llm-client.js';
 import type { AnalysisContext } from './analyzer.js';
 import { buildSystemPrompt, buildUserPrompt, buildCritiquePrompt } from './prompts.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 
 export const plannedTestSchema = z.object({
   id: z.string(),
@@ -32,16 +33,16 @@ export async function planTests(
   const systemPrompt = buildSystemPrompt(platform);
   const userPrompt = buildUserPrompt(context);
 
-  logger.info('Generating test cases via LLM...');
+  logger.info(t.planner.generating);
   const generateResponse = await llmClient.call(systemPrompt, userPrompt);
 
   let tests = parseTestsFromResponse(generateResponse.content);
   if (tests.length === 0) {
-    logger.warn('LLM returned no tests');
+    logger.warn(t.planner.noTestsReturned);
     return [];
   }
 
-  logger.info(`Generated ${tests.length} test(s). Running self-critique...`);
+  logger.info(t.planner.generatedRunningCritique(tests.length));
 
   // Step 2: Self-critique
   try {
@@ -51,12 +52,12 @@ export async function planTests(
 
     if (critiquedTests.length > 0) {
       tests = critiquedTests;
-      logger.info(`Self-critique complete: ${tests.length} test(s) after review`);
+      logger.info(t.planner.critiqueComplete(tests.length));
     } else {
-      logger.warn('Self-critique returned empty result, using original tests');
+      logger.warn(t.planner.critiqueEmpty);
     }
   } catch (err) {
-    logger.warn('Self-critique failed, using original tests:', err);
+    logger.warn(t.planner.critiqueFailed, err);
   }
 
   return tests;
@@ -78,7 +79,7 @@ function parseTestsFromResponse(content: string): PlannedTest[] {
     const parsed = JSON.parse(jsonStr);
     return plannedTestArraySchema.parse(parsed);
   } catch (err) {
-    logger.error('Failed to parse LLM response as PlannedTest[]:', err);
+    logger.error(t.planner.parseFailed, err);
     return [];
   }
 }

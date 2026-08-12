@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 
 export interface TestStatus {
   id: string;
@@ -43,7 +44,7 @@ export class TestStatusStore {
     const data: StatusFile = { tests: statuses };
     const content = stringify(data);
     await writeFile(this.filePath(appId), content, 'utf-8');
-    logger.debug(`Saved ${statuses.length} test statuses for ${appId}`);
+    logger.debug(t.store.saved(statuses.length, appId));
   }
 
   async getStatus(appId: string, testId: string): Promise<TestStatus | null> {

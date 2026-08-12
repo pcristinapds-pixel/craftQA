@@ -13,6 +13,7 @@ import type { TestInput } from '../runners/playwright/types.js';
 import { generateMarkdownReport } from '../report/markdown.js';
 import { ReportStore } from '../report/report-store.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../locales/index.js';
 
 export interface AgentResult {
   status: 'passed' | 'failed' | 'error';
@@ -42,32 +43,32 @@ export async function runAgent(
   const reportStore = new ReportStore(reportsDir);
 
   // Stage 1: Analyze
-  logger.info('Stage 1: Analyze — collecting context...');
+  logger.info(t.agentPipeline.stageAnalyze);
   const context = await analyze(agentConfig, registry, statusStore);
 
   // Stage 2: Plan
-  logger.info('Stage 2: Plan — generating test cases...');
+  logger.info(t.agentPipeline.stagePlan);
   const llmClient = new ClaudeLLMClient(sentinelConfig);
   const plannedTests = await planTests(context, llmClient);
 
   if (plannedTests.length === 0) {
-    logger.info('No tests generated. Nothing to execute.');
+    logger.info(t.agentPipeline.noTestsGenerated);
     return {
       status: 'passed',
       totalTests: 0,
       passed: 0,
       failed: 0,
-      report: 'No tests were generated for this PR.',
+      report: t.agentPipeline.noTestsGeneratedReportBody,
       tokenUsage: llmClient.getTotalUsage(),
     };
   }
 
-  logger.info(`Generated ${plannedTests.length} test(s)`);
+  logger.info(t.agentPipeline.testsGenerated(plannedTests.length));
 
   // Stage 3: Execute
-  logger.info('Stage 3: Execute — running tests...');
-  const webTests = plannedTests.filter((t) => t.platform === 'web');
-  const flutterTests = plannedTests.filter((t) => t.platform === 'flutter');
+  logger.info(t.agentPipeline.stageExecute);
+  const webTests = plannedTests.filter((test) => test.platform === 'web');
+  const flutterTests = plannedTests.filter((test) => test.platform === 'flutter');
 
   let runResult: UnifiedRunResult = {
     passed: 0, failed: 0, skipped: 0, timedOut: 0,
@@ -79,19 +80,19 @@ export async function runAgent(
   }
 
   if (flutterTests.length > 0) {
-    logger.warn('Flutter/Patrol execution not yet implemented. Skipping Flutter tests.');
+    logger.warn(t.agentPipeline.flutterNotImplemented);
   }
 
   // Record results in status store
   if (runResult.tests.length > 0) {
     await statusStore.recordBatch(
       agentConfig.appId,
-      runResult.tests.map((t) => ({ testId: t.id, passed: t.status === 'passed' })),
+      runResult.tests.map((test) => ({ testId: test.id, passed: test.status === 'passed' })),
     );
   }
 
   // Stage 4: Report
-  logger.info('Stage 4: Report — generating report...');
+  logger.info(t.agentPipeline.stageReport);
   const report = generateMarkdownReport(
     { ...runResult, total: runResult.tests.length },
     {
@@ -135,7 +136,7 @@ async function executeWebTests(
     if (validation.valid) {
       validTests.push({ id: test.id, title: test.title, code: test.code });
     } else {
-      logger.warn(`Test ${test.id} failed validation: ${validation.errors.join(', ')}`);
+      logger.warn(t.agentPipeline.testValidationFailed(test.id, validation.errors.join(', ')));
       skippedTests.push({
         id: test.id,
         title: test.title,
@@ -160,13 +161,13 @@ async function executeWebTests(
 
   // Merge skipped + executed results
   const allTests: UnifiedTestResult[] = [
-    ...result.tests.map((t) => ({
-      id: t.id,
-      title: t.title,
-      status: t.status,
-      duration: t.duration,
-      error: t.error,
-      screenshotPath: t.screenshotPath,
+    ...result.tests.map((test) => ({
+      id: test.id,
+      title: test.title,
+      status: test.status,
+      duration: test.duration,
+      error: test.error,
+      screenshotPath: test.screenshotPath,
     })),
     ...skippedTests,
   ];
