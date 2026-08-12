@@ -240,7 +240,7 @@ Os testes rodam contra o código já compilado, então o `npm run build` precisa
 - Zod 3.x. Não faça upgrade para o Zod 4.
 - Todo input externo (YAML, respostas de API, variáveis de ambiente) é validado via schemas Zod.
 - IDs fornecidos pelo usuário que chegam a um caminho de arquivo precisam passar por `sanitizeId()`.
-- As strings exibidas ao usuário (CLI, logs, relatórios) usam **inglês por padrão** — a tradução para Português do Brasil fica disponível via `SENTINEL_LOCALE=pt-BR` (veja `src/locales/`). Documentação e mensagens de commit podem ser em Coreano ou Português.
+- As strings exibidas ao usuário (CLI, logs, relatórios) usam **inglês por padrão** — a tradução para Português do Brasil fica disponível via `SENTINEL_LOCALE=pt-BR` (veja `src/locales/`). Documentação em Inglês e Português.
 
 ## Roadmap
 
