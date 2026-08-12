@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Autonomous QA agent — generates and runs E2E tests on PR events via the Claude API.</strong>
+  <strong>Agente de QA autônomo — gera e executa testes E2E em eventos de PR via Claude API.</strong>
 </p>
 
 <p align="center">
@@ -15,75 +15,82 @@
 
 ---
 
-sentinel-qa reads a code change, decides what needs testing, writes the tests, runs them, and reports back. It is a self-contained agent: point it at a pull request or a local diff, and it drives the full cycle without a human writing test cases.
+> 🇺🇸 [Read this in English](README.en.md)
 
-> **Project status: early development.** The Analyze → Plan → Execute → Report pipeline runs end to end for web (Playwright). Flutter execution, PR comments, Slack reporting, and in-run analytics capture are not implemented yet — see [Roadmap](#roadmap).
+O sentinel-qa lê uma mudança de código, decide o que precisa ser testado, escreve os testes, executa-os e reporta o resultado. É um agente autocontido: aponte-o para um pull request ou um diff local, e ele conduz o ciclo completo sem que uma pessoa precise escrever casos de teste.
 
-## Architecture
+> **Status do projeto: em desenvolvimento inicial.** O pipeline Analyze → Plan → Execute → Report roda de ponta a ponta para web (Playwright). Execução Flutter, comentários em PRs, relatórios no Slack e captura de analytics durante a execução ainda não foram implementados — veja o [Roadmap](#roadmap).
 
-A four-stage sequential pipeline:
+## Arquitetura
+
+Um pipeline sequencial de quatro etapas:
 
 ```
                     ┌──────────────────────────────────────────┐
-  PR event / CLI ──>│ 1. Analyze   git diff, PRD, app registry, │
-                    │              selectors, event specs,      │
-                    │              existing test statuses       │
+  Evento de PR /    │ 1. Analyze   git diff, PRD, app registry, │
+  CLI            ──>│              seletores, event specs,      │
+                    │              status de testes existentes  │
                     ├──────────────────────────────────────────┤
-                    │ 2. Plan      Claude API generates test    │
-                    │              cases + executable code,     │
-                    │              then self-critiques them     │
+                    │ 2. Plan      Claude API gera os casos de  │
+                    │              teste + código executável,   │
+                    │              depois se autocritica        │
                     ├──────────────────────────────────────────┤
-                    │ 3. Execute   AST validation gate ──>      │
+                    │ 3. Execute   Gate de validação AST ──>    │
                     │              Playwright (web)             │
                     ├──────────────────────────────────────────┤
-                    │ 4. Report    Markdown report + JSON,      │
+                    │ 4. Report    Relatório Markdown + JSON,   │
                     │              exit code 0 / 1              │
                     └──────────────────────────────────────────┘
 ```
 
-| Stage | Module | What it does |
+| Etapa | Módulo | O que faz |
 |-------|--------|--------------|
-| Analyze | `src/agent/analyzer.ts` | Collects the git diff, optional PRD file, app entry, UI selectors, analytics event specs, and prior test statuses into an `AnalysisContext`. |
-| Plan | `src/agent/planner.ts` | Sends that context to Claude, parses the response into a Zod-validated `PlannedTest[]`, then runs a self-critique pass over the generated code. |
-| Execute | `src/agent/index.ts` → `src/runners/` | Validates every generated test through an AST-based security check, writes the survivors to a temp directory, and runs them with Playwright. |
-| Report | `src/report/` | Renders a Markdown report, saves it alongside raw JSON, prints it to stdout, and returns a pass/fail exit code. |
+| Analyze | `src/agent/analyzer.ts` | Coleta o git diff, o arquivo de PRD opcional, a entrada do app, os seletores de UI, as specs de eventos de analytics e o status de testes anteriores em um `AnalysisContext`. |
+| Plan | `src/agent/planner.ts` | Envia esse contexto para a Claude, interpreta a resposta como um `PlannedTest[]` validado com Zod, e então roda uma etapa de autocrítica sobre o código gerado. |
+| Execute | `src/agent/index.ts` → `src/runners/` | Valida cada teste gerado com uma checagem de segurança baseada em AST, grava os sobreviventes em um diretório temporário e os executa com o Playwright. |
+| Report | `src/report/` | Renderiza um relatório em Markdown, salva junto com o JSON bruto, imprime no stdout e retorna um exit code de sucesso/falha. |
 
-## Quick Start
+## Início Rápido
 
 ```bash
-# Install dependencies and build
+# Instala as dependências e faz o build
 npm install
 npm run build
 
-# Claude API key (read by the Anthropic SDK)
+# Chave da Claude API (lida pelo Anthropic SDK)
 export ANTHROPIC_API_KEY=sk-ant-...
 
-# Run against the last commit, no PR required
+# Executa contra o último commit, sem precisar de PR
 npx sentinel-qa run --app arden-web --diff HEAD~1
 ```
 
-The agent exits `0` when every test passes and `1` on any failure or error, so it can gate a CI job directly.
+O agente encerra com `0` quando todos os testes passam e `1` em caso de qualquer falha ou erro, então pode servir como gate direto de um job de CI.
 
 ### CLI
 
 ```
 sentinel-qa run [options]
 
-  --app <id>              App ID from registry/apps.yaml (required)
-  --pr <number>           GitHub PR number
-  --base-branch <branch>  Base branch for diff (default: main)
-  --diff <ref>            Git diff reference (e.g., HEAD~1)
-  --validate-events       Enable data log QA
-  --prd <path>            Path to PRD file
-  --config <path>         Path to config directory
-  --help                  Show this help message
+  --app <id>              ID do app no registry/apps.yaml (obrigatório)
+  --pr <number>           Número do PR do GitHub
+  --base-branch <branch>  Branch base para o diff (padrão: main)
+  --diff <ref>            Referência de diff do Git (ex.: HEAD~1)
+  --validate-events       Habilita o data log QA
+  --prd <path>            Caminho para o arquivo de PRD
+  --config <path>         Caminho para o diretório de configuração
+  --help                  Exibe esta mensagem de ajuda
 ```
 
-Without `--diff`, the agent diffs `<base-branch>...HEAD`. A PRD passed via `--prd` is fed to the planner as product context, so tests can cover intent that the diff alone does not reveal — each generated test records whether it came from the `diff` or the `prd`.
+Sem `--diff`, o agente compara `<base-branch>...HEAD`. Um PRD passado via `--prd` é fornecido ao planner como contexto de produto, para que os testes possam cobrir intenções que o diff sozinho não revela — cada teste gerado registra se veio do `diff` ou do `prd`.
 
-## App Registry
+> Por padrão, todas as mensagens de CLI, logs e relatórios são exibidas em **inglês**, seguindo a convenção deste projeto. Para usar a versão em **Português do Brasil**, defina a variável de ambiente `SENTINEL_LOCALE=pt-BR` antes de rodar o comando:
+> ```bash
+> SENTINEL_LOCALE=pt-BR npx sentinel-qa run --app arden-web --diff HEAD~1
+> ```
 
-Apps are declared in `registry/apps.yaml`:
+## Registro de Apps (App Registry)
+
+Os apps são declarados em `registry/apps.yaml`:
 
 ```yaml
 apps:
@@ -96,7 +103,7 @@ apps:
       event_spec: ./event-specs/arden-web.yaml
 ```
 
-**Selectors** (`registry/selectors/<app>.yaml`) map logical names to UI locators. The planner is given this map so generated code references stable names instead of inventing selectors:
+**Selectors** (`registry/selectors/<app>.yaml`) mapeiam nomes lógicos para localizadores de UI. O planner recebe esse mapa para que o código gerado referencie nomes estáveis em vez de inventar seletores:
 
 ```yaml
 add_ingredient_button: "재료 추가"
@@ -104,7 +111,7 @@ generate_button: "레시피 생성"
 recipe_card: "레시피 생성 완료"
 ```
 
-**Event specs** (`registry/event-specs/<app>.yaml`) declare the analytics events a flow must emit, with required and optional parameter types:
+**Event specs** (`registry/event-specs/<app>.yaml`) declaram os eventos de analytics que um fluxo precisa emitir, com os tipos de parâmetros obrigatórios e opcionais:
 
 ```yaml
 events:
@@ -117,9 +124,9 @@ events:
       recipe_type: string
 ```
 
-## Configuration
+## Configuração
 
-Drop a `sentinel-qa.config.yaml` (or `.yml`) in the working directory, or point at its directory with `--config`. Every field is optional; the defaults below apply when the file is absent.
+Coloque um `sentinel-qa.config.yaml` (ou `.yml`) no diretório de trabalho, ou aponte para seu diretório com `--config`. Todos os campos são opcionais; os padrões abaixo se aplicam quando o arquivo está ausente.
 
 ```yaml
 anthropic:
@@ -127,7 +134,7 @@ anthropic:
   max_tokens: 4096
 
 slack:
-  webhook_url: ~                    # or set SLACK_WEBHOOK_URL
+  webhook_url: ~                    # ou defina SLACK_WEBHOOK_URL
   channel: "#qa-alerts"
 
 github:
@@ -135,121 +142,124 @@ github:
 
 test:
   max_retries: 3
-  timeout: 300000                   # per Playwright run, ms
+  timeout: 300000                   # por execução do Playwright, em ms
   confidence_threshold: 0.7
   quarantine:
     enabled: true
-    window: 5                       # runs tracked per test
+    window: 5                       # execuções rastreadas por teste
 
 cost:
   track_tokens: true
-  max_tokens_per_run: 100000        # hard stop for a single agent run
+  max_tokens_per_run: 100000        # limite rígido para uma única execução do agente
 ```
 
-### Environment variables
+### Variáveis de ambiente
 
-| Variable | Description |
+| Variável | Descrição |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Claude API key. Required — consumed directly by the Anthropic SDK. |
-| `SLACK_WEBHOOK_URL` | Overrides `slack.webhook_url` in the config file. |
-| `DEBUG` | Enables debug-level logging. |
+| `ANTHROPIC_API_KEY` | Chave da Claude API. Obrigatória — consumida diretamente pelo Anthropic SDK. |
+| `SLACK_WEBHOOK_URL` | Sobrescreve `slack.webhook_url` no arquivo de configuração. |
+| `DEBUG` | Habilita o log em nível debug. |
+| `SENTINEL_LOCALE` | Define o idioma das mensagens exibidas ao usuário (CLI, logs, relatórios). Padrão: inglês. Defina como `pt-BR` para usar Português do Brasil. |
 
-Registry and report locations are currently fixed at `./registry` and `./reports` relative to the working directory.
+As localizações do registry e dos relatórios estão atualmente fixadas em `./registry` e `./reports`, relativas ao diretório de trabalho.
 
-## Features
+## Funcionalidades
 
-### Generated-code security gate
+### Gate de segurança para código gerado
 
-Test code produced by an LLM is untrusted input, so nothing reaches Playwright unvalidated. `src/runners/playwright/validator.ts` parses each test with the TypeScript compiler API and rejects it on:
+Código de teste produzido por um LLM é input não confiável, então nada chega ao Playwright sem validação. `src/runners/playwright/validator.ts` interpreta cada teste com a TypeScript compiler API e o rejeita ao encontrar:
 
-- calls to `eval`, `Function`, and `require`
-- imports outside the allowlist — only `@playwright/*` and `playwright` are permitted
-- Node built-ins such as `child_process`, `fs`, `net`, `vm`, and `worker_threads`
-- `process.exit`, `process.kill`, and `process.env` access
-- dynamic global access patterns such as `globalThis[...]`
+- chamadas a `eval`, `Function` e `require`
+- imports fora da allowlist — apenas `@playwright/*` e `playwright` são permitidos
+- módulos nativos do Node como `child_process`, `fs`, `net`, `vm` e `worker_threads`
+- acesso a `process.exit`, `process.kill` e `process.env`
+- padrões de acesso dinâmico a globais, como `globalThis[...]`
 
-Rejected tests are recorded as `skipped` with the validation error and the run continues. Execution itself happens by writing tests to a temp directory and spawning Playwright as a subprocess — never through `eval`.
+Testes rejeitados são registrados como `skipped` com o erro de validação, e a execução continua. A execução em si acontece gravando os testes em um diretório temporário e disparando o Playwright como um subprocesso — nunca via `eval`.
 
-### Token budget enforcement
+### Controle de orçamento de tokens
 
-Every Claude call is logged with its input/output token counts, and the running total is checked before each request. Exceeding `cost.max_tokens_per_run` aborts the run rather than silently spending more.
+Toda chamada à Claude é registrada em log com sua contagem de tokens de entrada/saída, e o total acumulado é verificado antes de cada requisição. Exceder `cost.max_tokens_per_run` aborta a execução em vez de continuar gastando silenciosamente.
 
-### Quarantine tracking
+### Rastreamento de quarentena
 
-`src/store/test-status-store.ts` keeps a rolling window of the last N runs per test in `reports/<app-id>/status.yaml` and classifies each test as `new`, `stable`, `quarantine`, or `rejected` based on its pass rate. The analyzer feeds the current statuses back into the planner so it does not regenerate tests that already exist and pass.
+`src/store/test-status-store.ts` mantém uma janela deslizante das últimas N execuções por teste em `reports/<app-id>/status.yaml` e classifica cada teste como `new`, `stable`, `quarantine` ou `rejected` com base na sua taxa de aprovação. O analyzer devolve esse status atual para o planner, para que ele não regenere testes que já existem e já passam.
 
-### Data log QA
+### Data Log QA
 
-`src/event-validation/` compares captured analytics events against the spec: missing events, unexpected events, and parameter type errors. Parsers ship for GA4, Firebase, Amplitude, and Mixpanel endpoints.
+`src/event-validation/` compara os eventos de analytics capturados contra a spec: eventos ausentes, eventos inesperados e erros de tipo de parâmetro. Há parsers prontos para os endpoints do GA4, Firebase, Amplitude e Mixpanel.
 
-> Capture is not yet wired into the Playwright runner. Today `--validate-events` loads the event spec into the planning context; live `page.route()` interception is on the roadmap.
+> A captura ainda não está conectada ao runner do Playwright. Hoje, `--validate-events` carrega a event spec no contexto de planejamento; a interceptação ao vivo via `page.route()` está no roadmap.
 
-### Reports
+### Relatórios
 
-Each run writes `reports/<app-id>/<timestamp>/report.md` plus `result.json`, and prints the Markdown to stdout. The report contains a run summary, a per-test table, and expanded detail for each failure.
+Cada execução grava `reports/<app-id>/<timestamp>/report.md` mais `result.json`, e imprime o Markdown no stdout. O relatório contém um resumo da execução, uma tabela por teste e o detalhamento de cada falha.
 
-## Project Structure
+## Estrutura do Projeto
 
 ```
 sentinel-qa/
   src/
-    index.ts               # bin entry point
-    triggers/cli.ts        # CLI argument parsing
-    agent/                 # analyzer, planner, prompts, llm-client, orchestrator
+    index.ts               # ponto de entrada do binário
+    triggers/cli.ts        # parsing de argumentos da CLI
+    agent/                 # analyzer, planner, prompts, llm-client, orquestrador
+    locales/                # dicionários de mensagens (i18n: en / pt-BR)
     runners/
-      playwright/          # web runner + AST validator
-      maestro/             # legacy Flutter bridge (being replaced by Patrol)
-    event-validation/      # analytics capture patterns + spec validation
-    registry/              # app registry loader
-    report/                # Markdown rendering + report storage
-    store/                 # test status / quarantine tracking
-    config/                # YAML config loader
-    utils/                 # logger, sanitize, YAML loader
-    __tests__/             # unit tests (node:test)
+      playwright/          # runner web + validador AST
+      maestro/              # bridge legado do Flutter (sendo substituído pelo Patrol)
+    event-validation/      # padrões de captura de analytics + validação de specs
+    registry/               # loader do registro de apps
+    report/                 # renderização em Markdown + armazenamento de relatórios
+    store/                  # rastreamento de status de testes / quarentena
+    config/                 # loader de configuração YAML
+    utils/                  # logger, sanitize, YAML loader
+    __tests__/              # testes unitários (node:test)
   registry/
-    apps.yaml              # registered apps
-    selectors/             # UI selector maps
-    event-specs/           # analytics event specs
-  reports/                 # generated reports + status (gitignored)
-  docs/agent/              # PRD and development checklist
+    apps.yaml               # apps registrados
+    selectors/               # mapas de seletores de UI
+    event-specs/             # specs de eventos de analytics
+  reports/                   # relatórios e status gerados (no gitignore)
+  docs/agent/                # PRD e checklist de desenvolvimento
 ```
 
-## Development
+## Desenvolvimento
 
 ```bash
 npm install
 npm run build            # tsc
-npm run test             # node:test over dist/
+npm run test             # node:test sobre dist/
 npm run lint
 ```
 
-Tests run against compiled output, so `npm run build` must succeed first. The full contributor workflow — develop → build → review → test → checklist → commit — is described in [CLAUDE.md](CLAUDE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+Os testes rodam contra o código já compilado, então o `npm run build` precisa ser executado com sucesso antes. O workflow completo de contribuição — desenvolver → build → revisão → teste → checklist → commit — está descrito em [CLAUDE.md](CLAUDE.md) e [CONTRIBUTING.md](CONTRIBUTING.md) (também disponível em [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md)).
 
-**Constraints worth knowing before you patch anything:**
+**Restrições importantes antes de mexer em qualquer coisa:**
 
-- ESM only (`"type": "module"`) — imports use `.js` extensions even for `.ts` sources.
-- Zod 3.x. Do not upgrade to Zod 4.
-- All external input (YAML, API responses, env vars) is validated through Zod schemas.
-- User-provided IDs that reach a file path must go through `sanitizeId()`.
-- User-facing strings are English; docs and commit messages may be Korean.
+- Apenas ESM (`"type": "module"`) — os imports usam extensão `.js` mesmo para arquivos `.ts`.
+- Zod 3.x. Não faça upgrade para o Zod 4.
+- Todo input externo (YAML, respostas de API, variáveis de ambiente) é validado via schemas Zod.
+- IDs fornecidos pelo usuário que chegam a um caminho de arquivo precisam passar por `sanitizeId()`.
+- As strings exibidas ao usuário (CLI, logs, relatórios) usam **inglês por padrão** — a tradução para Português do Brasil fica disponível via `SENTINEL_LOCALE=pt-BR` (veja `src/locales/`). Documentação e mensagens de commit podem ser em Coreano ou Português.
 
 ## Roadmap
 
-| Area | Status |
+| Área | Status |
 |------|--------|
-| CLI trigger, Analyze stage | Done |
-| Plan stage (Claude API, self-critique) | Done |
-| Execute stage (Playwright, AST gate) | Done |
-| Report generation (Markdown + JSON) | Done |
-| Analytics capture during test runs | Planned |
-| Confidence score + token usage in reports | Planned |
-| GitHub PR comments (`@octokit/rest`) | Planned |
-| GitHub Actions trigger + workflow | Planned |
-| Slack bug reports, retry loop | Planned |
-| Patrol runner for Flutter | Planned |
+| Trigger de CLI, etapa Analyze | Concluído |
+| Etapa Plan (Claude API, autocrítica) | Concluído |
+| Etapa Execute (Playwright, gate AST) | Concluído |
+| Geração de relatórios (Markdown + JSON) | Concluído |
+| Módulo de i18n (CLI, logs e relatórios em pt-BR) | Concluído |
+| Captura de analytics durante a execução dos testes | Planejado |
+| Score de confiança + uso de tokens nos relatórios | Planejado |
+| Comentários em PRs no GitHub (`@octokit/rest`) | Planejado |
+| Trigger e workflow do GitHub Actions | Planejado |
+| Relatórios de bugs no Slack, loop de retry | Planejado |
+| Runner Patrol para Flutter | Planejado |
 
-Detailed task breakdown: [`docs/agent/sentinel-qa-checklist.md`](docs/agent/sentinel-qa-checklist.md).
+Detalhamento das tarefas: [`docs/agent/sentinel-qa-checklist.md`](docs/agent/sentinel-qa-checklist.md).
 
-## License
+## Licença
 
 [MIT](LICENSE)
