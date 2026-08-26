@@ -15,38 +15,46 @@ Always follow this sequence:
 
 1. **Develop** — Write/edit code
 2. **Build** — `npm run build` and fix compile errors
-3. **Test** — `npm run test` and fix failures
-4. **Commit** — Only after build and tests pass
+3. **Code review** — Review the change for clean code, security, and data flow
+4. **Test** — `npm run test` and fix failures
+5. **Update checklist** — Mark completed items in `docs/agent/sentinel-qa-checklist.md`
+6. **Commit** — Only after steps 1–5 pass
+
+See [CLAUDE.md](CLAUDE.md) for the full set of project conventions.
 
 ## Code Style
 
-- **ESM only** — `"type": "module"`, use `.js` extensions in imports
-- **No `console.log()`** — stdout is the JSON-RPC stream. Use `console.error()` via `src/utils/logger.ts`
-- **Zod 3.x** — Do not upgrade to Zod 4 (MCP SDK compatibility)
-- **User-facing messages** — Must be in English
-- **TypeScript strict mode** — All packages use strict: true
+- **ESM only** — `"type": "module"`, use `.js` extensions in imports (even for `.ts` sources)
+- **Zod 3.x** — Do not upgrade to Zod 4
+- **User-facing messages** — Default to English; the pt-BR translation lives in `src/locales/` and is opt-in via `SENTINEL_LOCALE=pt-BR`. Add new strings to the locale dictionaries instead of hardcoding them at the call site
+- **TypeScript strict mode** — `strict: true`
+- **Path safety** — User-provided IDs that reach a file path must go through `sanitizeId()` (`src/utils/sanitize.ts`)
 
 ## Project Structure
 
-- `packages/mcp-server/` — Core MCP server
-- `packages/playwright-runner/` — Playwright web test runner
-- `packages/maestro-bridge/` — Maestro Flutter test bridge
-- `registry/` — App configuration and specs
+- `src/agent/` — analyzer, planner, prompts, llm-client, orchestrator
+- `src/runners/` — Playwright (web) and Maestro/Patrol (Flutter) test execution
+- `src/event-validation/` — analytics capture patterns + spec validation (data log QA)
+- `src/registry/` — app registry loader (`registry/apps.yaml`, selectors, event specs)
+- `src/report/` — Markdown report rendering + report storage
+- `src/store/` — test status / quarantine tracking
+- `src/config/` — YAML config loader
+- `src/locales/` — i18n message dictionaries (English default, pt-BR opt-in)
+- `src/triggers/` — entry points (CLI today; GitHub Actions planned)
+- `registry/` — app configuration and specs consumed at runtime
 
-## Adding a New MCP Tool
+## Adding Support for a New App
 
-1. Create `packages/mcp-server/src/tools/<name>.ts`
-2. Export a `register<Name>(server, ...deps)` function
-3. Add Zod input schema in `src/schemas/tools.ts`
-4. Wire it up in `src/index.ts`
-5. Add tests
+1. Add an entry to `registry/apps.yaml` (see the existing `example-web` / `example-flutter` entries as a template)
+2. Add a selector map at `registry/selectors/<app-id>.yaml`
+3. Optionally add an event spec at `registry/event-specs/<app-id>.yaml` for data log QA
+4. Run `npx sentinel-qa run --app <app-id> --diff HEAD~1` to verify
 
 ## Running Tests
 
 ```bash
-npm run test                    # All packages
-npm run test -w packages/mcp-server  # Specific package
-node scripts/verify-mcp-flow.mjs     # E2E verification
+npm run build            # tests run against compiled output in dist/
+npm run test             # runs everything under dist/__tests__/
 ```
 
 ## Submitting Changes
@@ -58,7 +66,7 @@ node scripts/verify-mcp-flow.mjs     # E2E verification
 
 ## Reporting Issues
 
-Please use [GitHub Issues](https://github.com/eodin/sentinel-qa/issues) with:
+Please use [GitHub Issues](https://github.com/pcristinapds-pixel/craftQA/issues) with:
 - Steps to reproduce
 - Expected vs actual behavior
 - Node.js version and OS

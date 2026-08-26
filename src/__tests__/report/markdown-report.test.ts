@@ -6,7 +6,7 @@ import type { ReportMeta } from '../../report/markdown.js';
 import type { RunResult } from '../../runners/playwright/types.js';
 
 const baseMeta: ReportMeta = {
-  appId: 'arden-web',
+  appId: 'example-web',
   suite: 'all',
   platform: 'web',
   timestamp: '2026-03-14T10-30-00-000Z',
@@ -29,7 +29,7 @@ describe('generateMarkdownReport', () => {
 
     const md = generateMarkdownReport(result, baseMeta);
 
-    assert.ok(md.includes('# Test Report: arden-web'));
+    assert.ok(md.includes('# Test Report: example-web'));
     assert.ok(md.includes('ALL PASSED'));
     assert.ok(md.includes('TC-001'));
     assert.ok(md.includes('TC-002'));
@@ -109,10 +109,10 @@ describe('generateMarkdownReport', () => {
   it('should include meta information in the header', () => {
     const md = generateMarkdownReport(
       { passed: 0, failed: 0, skipped: 0, timedOut: 0, total: 0, duration: 0, tests: [] },
-      { appId: 'fridgify', suite: 'recipe', platform: 'web', timestamp: '2026-03-14T12-00-00' },
+      { appId: 'example-flutter', suite: 'recipe', platform: 'web', timestamp: '2026-03-14T12-00-00' },
     );
 
-    assert.ok(md.includes('fridgify'));
+    assert.ok(md.includes('example-flutter'));
     assert.ok(md.includes('recipe'));
     assert.ok(md.includes('web'));
     assert.ok(md.includes('2026-03-14T12-00-00'));

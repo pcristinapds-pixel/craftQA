@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ahn283/sentinel-qa/main/img/sentinel_logo.png" alt="Sentinel QA" width="480" />
+  <img src="https://raw.githubusercontent.com/pcristinapds-pixel/craftQA/main/img/sentinel_logo.png" alt="Sentinel QA" width="480" />
 </p>
 
 <p align="center">
@@ -7,10 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/sentinel-qa"><img src="https://img.shields.io/npm/v/sentinel-qa.svg" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/sentinel-qa"><img src="https://img.shields.io/npm/dm/sentinel-qa.svg" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/node/v/sentinel-qa.svg" alt="node version" />
-  <a href="https://github.com/ahn283/sentinel-qa/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/sentinel-qa.svg" alt="license" /></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg" alt="node version" />
+  <a href="https://github.com/pcristinapds-pixel/craftQA/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license" /></a>
 </p>
 
 ---
@@ -61,7 +59,7 @@ npm run build
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # Run against the last commit, no PR required
-npx sentinel-qa run --app arden-web --diff HEAD~1
+npx sentinel-qa run --app example-web --diff HEAD~1
 ```
 
 The agent exits `0` when every test passes and `1` on any failure or error, so it can gate a CI job directly.
@@ -89,13 +87,13 @@ Apps are declared in `registry/apps.yaml`:
 
 ```yaml
 apps:
-  - id: arden-web
+  - id: example-web
     type: web                       # web | flutter
-    url: https://arden.app
+    url: https://your-app.example.com
     prd: notion://placeholder
     context:
-      selectors: ./selectors/arden-web.yaml
-      event_spec: ./event-specs/arden-web.yaml
+      selectors: ./selectors/example-web.yaml
+      event_spec: ./event-specs/example-web.yaml
 ```
 
 **Selectors** (`registry/selectors/<app>.yaml`) map logical names to UI locators. The planner is given this map so generated code references stable names instead of inventing selectors:

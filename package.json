@@ -9,9 +9,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ahn283/sentinel-qa.git"
+    "url": "https://github.com/pcristinapds-pixel/craftQA.git"
   },
-  "homepage": "https://github.com/ahn283/sentinel-qa#readme",
+  "homepage": "https://github.com/pcristinapds-pixel/craftQA#readme",
   "keywords": [
     "qa",
     "testing",

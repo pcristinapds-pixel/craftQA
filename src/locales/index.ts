@@ -13,7 +13,7 @@
 //
 // To opt into Portuguese, set the environment variable before running the
 // CLI, e.g.:
-//   SENTINEL_LOCALE=pt-BR npx sentinel-qa run --app arden-web --diff HEAD~1
+//   SENTINEL_LOCALE=pt-BR npx sentinel-qa run --app example-web --diff HEAD~1
 
 import { en } from './en.js';
 import type { Messages } from './en.js';

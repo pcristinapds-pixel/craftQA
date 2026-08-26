@@ -1,16 +1,16 @@
 apps:
-  - id: fridgify
+  - id: example-flutter
     type: flutter
-    repo: github.com/eodin/fridgify
+    repo: github.com/your-org/your-flutter-app
     prd: notion://placeholder
     context:
-      selectors: ./selectors/fridgify.yaml
-      event_spec: ./event-specs/fridgify.yaml
+      selectors: ./selectors/example-flutter.yaml
+      event_spec: ./event-specs/example-flutter.yaml
 
-  - id: arden-web
+  - id: example-web
     type: web
-    url: https://arden.app
+    url: https://your-app.example.com
     prd: notion://placeholder
     context:
-      selectors: ./selectors/arden-web.yaml
-      event_spec: ./event-specs/arden-web.yaml
+      selectors: ./selectors/example-web.yaml
+      event_spec: ./event-specs/example-web.yaml

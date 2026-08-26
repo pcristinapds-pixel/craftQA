@@ -6,7 +6,7 @@ export interface MaestroTestInput {
 
 export interface MaestroRunOptions {
   timeout?: number;
-  appId?: string; // e.g., com.eodin.fridgify
+  appId?: string; // e.g., com.example.myapp
   signal?: AbortSignal;
   onProgress?: (current: number, total: number, testTitle: string) => void;
 }

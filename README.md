@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ahn283/sentinel-qa/main/img/sentinel_logo.png" alt="Sentinel QA" width="480" />
+  <img src="https://raw.githubusercontent.com/pcristinapds-pixel/craftQA/main/img/sentinel_logo.png" alt="Sentinel QA" width="480" />
 </p>
 
 <p align="center">
@@ -7,10 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/sentinel-qa"><img src="https://img.shields.io/npm/v/sentinel-qa.svg" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/sentinel-qa"><img src="https://img.shields.io/npm/dm/sentinel-qa.svg" alt="npm downloads" /></a>
-  <img src="https://img.shields.io/node/v/sentinel-qa.svg" alt="node version" />
-  <a href="https://github.com/ahn283/sentinel-qa/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/sentinel-qa.svg" alt="license" /></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg" alt="node version" />
+  <a href="https://github.com/pcristinapds-pixel/craftQA/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license" /></a>
 </p>
 
 ---
@@ -61,7 +59,7 @@ npm run build
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # Executa contra o último commit, sem precisar de PR
-npx sentinel-qa run --app arden-web --diff HEAD~1
+npx sentinel-qa run --app example-web --diff HEAD~1
 ```
 
 O agente encerra com `0` quando todos os testes passam e `1` em caso de qualquer falha ou erro, então pode servir como gate direto de um job de CI.
@@ -85,7 +83,7 @@ Sem `--diff`, o agente compara `<base-branch>...HEAD`. Um PRD passado via `--prd
 
 > Por padrão, todas as mensagens de CLI, logs e relatórios são exibidas em **inglês**, seguindo a convenção deste projeto. Para usar a versão em **Português do Brasil**, defina a variável de ambiente `SENTINEL_LOCALE=pt-BR` antes de rodar o comando:
 > ```bash
-> SENTINEL_LOCALE=pt-BR npx sentinel-qa run --app arden-web --diff HEAD~1
+> SENTINEL_LOCALE=pt-BR npx sentinel-qa run --app example-web --diff HEAD~1
 > ```
 
 ## Registro de Apps (App Registry)
@@ -94,13 +92,13 @@ Os apps são declarados em `registry/apps.yaml`:
 
 ```yaml
 apps:
-  - id: arden-web
+  - id: example-web
     type: web                       # web | flutter
-    url: https://arden.app
+    url: https://your-app.example.com
     prd: notion://placeholder
     context:
-      selectors: ./selectors/arden-web.yaml
-      event_spec: ./event-specs/arden-web.yaml
+      selectors: ./selectors/example-web.yaml
+      event_spec: ./event-specs/example-web.yaml
 ```
 
 **Selectors** (`registry/selectors/<app>.yaml`) mapeiam nomes lógicos para localizadores de UI. O planner recebe esse mapa para que o código gerado referencie nomes estáveis em vez de inventar seletores:
