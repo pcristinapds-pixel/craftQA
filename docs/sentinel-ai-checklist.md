@@ -1,275 +1,275 @@
-# [ARCHIVED] sentinel-qa 개발 체크리스트
+# [ARQUIVADO] Checklist de Desenvolvimento do sentinel-qa
 
-> **⚠️ 이 문서는 아카이브되었습니다.** MCP 서버 기반 체크리스트는 에이전트 아키텍처로 대체되었습니다.
-> 최신 체크리스트: `docs/agent/sentinel-qa-checklist.md`
+> **⚠️ Este documento foi arquivado.** O checklist baseado no servidor MCP foi substituído pela arquitetura de agente.
+> Checklist atual: `docs/agent/sentinel-qa-checklist.md`
 
-> 기준 문서: `docs/sentinel-qa-planning.md`
-> 생성일: 2026-03-14
-
----
-
-## 1단계: MCP 서버 기본 구조 + 앱 레지스트리
-
-### 프로젝트 초기화
-- [x] Git 레포 초기화 + `.gitignore` 설정
-- [x] root `package.json` 생성 (`private: true`, `type: module`, `workspaces`)
-- [x] `turbo.json` 생성 (build/test/lint 파이프라인)
-- [x] TypeScript 공통 설정 (`tsconfig.base.json`)
-- [x] Prettier 설정 (ESLint는 후속 추가)
-- [x] `.env.example` 생성
-- [x] `.env`를 `.gitignore`에 추가
-
-### mcp-server 패키지
-- [x] `packages/mcp-server/package.json` 생성 (`bin`, `type: module`, `files`)
-- [x] `packages/mcp-server/tsconfig.json` 생성
-- [x] `@modelcontextprotocol/sdk`, `zod` 의존성 설치
-- [x] `src/index.ts` 진입점 생성 (`#!/usr/bin/env node` shebang)
-- [x] `StdioServerTransport` 연결 구현
-- [x] 로깅 유틸리티 구현 (`console.error` 전용, stdout 오염 방지)
-
-### MCP 툴 구현
-- [x] `list_apps` — apps.yaml 읽어서 앱 목록 반환
-- [x] `get_selectors` — 앱별 selector 매핑 반환
-- [x] `save_tests` — 테스트케이스/코드 저장 (Zod 스키마 검증)
-- [x] `run_tests` — 테스트 실행 (스텁, 실제 러너 연동은 2단계)
-- [x] `get_report` — 테스트 결과 요약 반환 (스텁)
-
-### 앱 레지스트리
-- [x] `registry/apps.yaml` 생성 (첫 앱 등록)
-- [x] `registry/selectors/` 디렉토리 + 샘플 selector 파일
-- [x] YAML 파싱 유틸리티 구현
-
-### 빌드 & 검증
-- [x] `npm run build` 로 빌드 확인
-- [x] 빌드 결과물에 shebang 포함 확인 (`chmod 755`)
-- [x] 수동 JSON-RPC로 initialize + tools/list + tools/call 검증 완료
-- [ ] MCP Inspector로 대화형 검증 (선택)
+> Documento de referência: `docs/sentinel-qa-planning.md`
+> Criado em: 2026-03-14
 
 ---
 
-## 2단계: Playwright 웹 테스트 러너
+## Etapa 1: Estrutura Básica do Servidor MCP + Registry de Apps
 
-### playwright-runner 패키지
-- [x] `packages/playwright-runner/package.json` 생성
-- [x] `@playwright/test` 의존성 설치
-- [x] `playwright.config.ts` 기본 설정 (headless, timeout, reporter=json)
+### Inicialização do projeto
+- [x] Inicializar o repositório Git + configurar `.gitignore`
+- [x] Criar o `package.json` raiz (`private: true`, `type: module`, `workspaces`)
+- [x] Criar o `turbo.json` (pipeline de build/test/lint)
+- [x] Configuração comum do TypeScript (`tsconfig.base.json`)
+- [x] Configurar o Prettier (ESLint fica para depois)
+- [x] Criar o `.env.example`
+- [x] Adicionar `.env` ao `.gitignore`
 
-### Write-to-Temp-File 실행 패턴
-- [x] 임시 디렉토리 생성 유틸리티
-- [x] 테스트 코드 → `.spec.ts` 임시 파일 작성
-- [x] `child_process.spawn("npx playwright test ...")` 실행
-- [x] JSON reporter 결과 파싱
-- [x] 임시 파일/디렉토리 cleanup
+### Pacote mcp-server
+- [x] Criar `packages/mcp-server/package.json` (`bin`, `type: module`, `files`)
+- [x] Criar `packages/mcp-server/tsconfig.json`
+- [x] Instalar as dependências `@modelcontextprotocol/sdk`, `zod`
+- [x] Criar o ponto de entrada `src/index.ts` (shebang `#!/usr/bin/env node`)
+- [x] Implementar a conexão via `StdioServerTransport`
+- [x] Implementar o utilitário de logging (só `console.error`, para não poluir o stdout)
 
-### 보안
-- [x] 코드 검증 모듈 구현 (위험 API 차단: eval, fs, child_process 등)
-- [x] 실행 timeout 설정
-- [x] 브라우저 컨텍스트 격리 확인
+### Implementação das tools do MCP
+- [x] `list_apps` — lê o apps.yaml e retorna a lista de apps
+- [x] `get_selectors` — retorna o mapa de seletores por app
+- [x] `save_tests` — salva caso de teste/código (com validação de schema Zod)
+- [x] `run_tests` — executa os testes (stub; a integração real com o runner fica pra Etapa 2)
+- [x] `get_report` — retorna o resumo do resultado dos testes (stub)
 
-### mcp-server 연동
-- [x] `run_tests` 툴에서 `playwright-runner` 호출 연결
-- [x] progress notifications 구현 (테스트 진행률)
-- [x] cancellation 구현 (child process kill + AbortSignal)
-- [x] 실패 시 스크린샷 경로를 응답에 포함
+### Registry de apps
+- [x] Criar o `registry/apps.yaml` (registro do primeiro app)
+- [x] Criar o diretório `registry/selectors/` + arquivo de exemplo de seletor
+- [x] Implementar o utilitário de parsing de YAML
 
-### 테스트
-- [x] 샘플 웹앱으로 Playwright 테스트 실행 E2E 검증 (example.com 대상, 5개 케이스)
-- [x] JSON 결과 파싱 단위 테스트 (8개 케이스 통과)
-- [x] 코드 검증 단위 테스트 (18개 케이스 통과)
-
----
-
-## 3단계: pilot-ai 연동 검증
-
-### pilot-ai 설정
-- [x] pilot-ai `mcpServers` 설정에 sentinel-qa 추가 (`~/.pilot/mcp-config.json`)
-- [x] pilot-ai MCP registry에 sentinel-qa 엔트리 추가
-- [x] sentinel-qa MCP 서버 initialize 응답 확인
-
-### E2E 플로우 검증
-- [x] MCP E2E 검증 스크립트 작성 (`scripts/verify-mcp-flow.mjs`)
-- [x] initialize → list_apps → get_selectors → save_tests → run_tests → get_report 전체 플로우 6/6 통과
-- [ ] pilot-ai에서 실제 자연어 명령 → 전체 플로우 동작 확인 (pilot-ai 측 테스트 코드 생성 로직 구현 후)
-- [ ] Telegram/Slack에서 자연어 명령 → 전체 플로우 동작 확인
-
-### progress 확인
-- [ ] `run_tests` 실행 중 progress 알림이 pilot-ai에 전달되는지 확인
-- [ ] pilot-ai가 progress를 Telegram으로 중계하는지 확인
-
-### 연동 문서
-- [x] pilot-ai 팀 연동 가이드 작성 (`docs/pilot-ai-integration-guide.md`)
-- [x] sentinel-qa 업데이트 시 pilot-ai 대응 가이드 포함
+### Build & Validação
+- [x] Confirmar o build com `npm run build`
+- [x] Confirmar que o shebang está incluído no resultado do build (`chmod 755`)
+- [x] Validar manualmente via JSON-RPC — initialize + tools/list + tools/call, tudo funcionando
+- [ ] Validação interativa com o MCP Inspector (opcional)
 
 ---
 
-## 4단계: Maestro 브릿지 (Flutter 앱)
+## Etapa 2: Runner Web de Testes Playwright
 
-### maestro-bridge 패키지
-- [x] `packages/maestro-bridge/package.json` 생성
-- [x] Flutter SDK 설치 (3.41.4)
-- [x] Maestro CLI 다운로드 (Java 설치 필요 — `brew install --cask temurin`)
+### Pacote playwright-runner
+- [x] Criar `packages/playwright-runner/package.json`
+- [x] Instalar a dependência `@playwright/test`
+- [x] Configuração básica do `playwright.config.ts` (headless, timeout, reporter=json)
 
-### YAML 실행 패턴
-- [x] Maestro YAML → 임시 파일 작성
-- [x] `child_process.spawn("maestro test ... --format json")` 실행
-- [x] JSON 결과 파싱 (`parseMaestroResult()`)
-- [x] 임시 파일 cleanup
-- [x] AbortSignal 기반 cancellation 지원
+### Padrão de Execução Write-to-Temp-File
+- [x] Utilitário de criação de diretório temporário
+- [x] Escrever o código de teste em arquivo temporário `.spec.ts`
+- [x] Executar via `child_process.spawn("npx playwright test ...")`
+- [x] Parsing do resultado do JSON reporter
+- [x] Limpeza dos arquivos/diretórios temporários
 
-### mcp-server 연동
-- [x] `run_tests` 툴에서 platform 분기 (web → playwright, flutter → maestro)
-- [x] progress notifications 구현
-- [x] cancellation 구현
-- [x] Maestro 실행 후 recordRun + 리포트 저장
+### Segurança
+- [x] Implementar o módulo de validação de código (bloqueia APIs perigosas: eval, fs, child_process etc.)
+- [x] Configurar timeout de execução
+- [x] Confirmar o isolamento do contexto do navegador
 
-### CI/CD 환경
-- [ ] GitHub Actions에서 Android 에뮬레이터 + Maestro 실행 테스트
-- [ ] GitHub Actions에서 iOS 시뮬레이터 + Maestro 실행 테스트 (macos runner)
+### Integração com o mcp-server
+- [x] Conectar a chamada do `playwright-runner` na tool `run_tests`
+- [x] Implementar as notificações de progress (progresso do teste)
+- [x] Implementar cancelamento (kill do child process + AbortSignal)
+- [x] Incluir o caminho do screenshot na resposta em caso de falha
 
-### 테스트
-- [x] Maestro JSON 결과 파서 단위 테스트 (9개 케이스 통과)
-- [ ] 샘플 Flutter 앱으로 Maestro YAML 실행 E2E 검증 (Java 설치 후)
-- [ ] pilot-ai → Maestro YAML 생성 → sentinel-qa 실행 → 결과 반환
-
----
-
-## 5단계: 데이터 로그 QA (Analytics 이벤트 검증)
-
-### 이벤트 스펙 관리
-- [x] `registry/event-specs/` 디렉토리 생성
-- [x] 이벤트 스펙 YAML 포맷 정의 (`event_name`, `required_params`, `optional_params`)
-- [x] 샘플 이벤트 스펙 작성 (`registry/event-specs/fridgify.yaml`, `arden-web.yaml`)
-- [x] `apps.yaml`에 `event_spec` 필드 추가
-- [x] `AppRegistry`에서 이벤트 스펙 로딩 구현 (`getEventSpec()`)
-
-### 웹 이벤트 캡처 (Playwright)
-- [x] 지원 SDK별 URL 패턴 매핑 (GA4, Firebase, Amplitude, Mixpanel)
-- [x] 캡처된 요청에서 이벤트 이름 + 파라미터 파싱 (SDK별 파서)
-- [x] `matchAnalyticsUrl()` — URL이 analytics 엔드포인트인지 판별
-- [ ] `page.on('request')` / `page.route()` 로 실시간 인터셉트 (Playwright runner 통합)
-
-### Flutter 이벤트 캡처 (Maestro)
-- [ ] 캡처 방식 확정 (`adb logcat` / HTTP 프록시 / Firebase Debug Mode)
-- [ ] 디바이스 로그에서 analytics 이벤트 파싱
-- [ ] 캡처 결과 → 구조화된 이벤트 배열로 변환
-
-### 스펙 대비 검증 로직
-- [x] 캡처 이벤트 vs 스펙 diff 비교 엔진 구현 (`event-validation/validator.ts`)
-- [x] 누락 이벤트 (expected but not fired) 감지
-- [x] 예상치 못한 이벤트 (fired but not in spec) 감지
-- [x] 파라미터 불일치 감지 (타입 오류, 필수 파라미터 누락)
-- [x] Zod 스키마로 이벤트 스펙 입력 검증 (`eventSpecConfigSchema`)
-
-### mcp-server 연동
-- [x] `run_tests` 스키마에 `validate_events: boolean` 옵션 추가
-- [x] `get_report` 응답에 `event_validation` 결과 포함 (Markdown 리포트에 섹션 추가)
-- [x] 이벤트 검증 결과 포맷 정의 (`matched`, `missing`, `unexpected`, `param_errors`)
-
-### 테스트
-- [x] 이벤트 검증 엔진 단위 테스트 (11개 케이스 통과)
-- [x] analytics URL 패턴 매칭 + SDK별 파서 단위 테스트 (10개 케이스 통과)
-- [x] Zod 이벤트 스펙 스키마 검증 테스트 (7개 케이스 통과)
-- [ ] 샘플 웹앱에서 analytics 이벤트 캡처 + 검증 E2E 테스트
+### Testes
+- [x] Validação E2E rodando Playwright em um app web de exemplo (contra example.com, 5 casos)
+- [x] Teste unitário do parsing do resultado JSON (8 casos passando)
+- [x] Teste unitário da validação de código (18 casos passando)
 
 ---
 
-## 6단계: 테스트 신뢰성 관리 (Quarantine)
+## Etapa 3: Validação da Integração com o pilot-ai
 
-### 상태 관리
-- [x] `TestStatusStore` 구현 (`tests/<app_id>/status.yaml` YAML 기반)
-- [x] 테스트 상태 CRUD (new → stable / quarantine / rejected)
-- [x] pass_rate 계산 로직 (최근 5회 실행 기준)
+### Configuração do pilot-ai
+- [x] Adicionar o sentinel-qa na configuração `mcpServers` do pilot-ai (`~/.pilot/mcp-config.json`)
+- [x] Adicionar a entrada do sentinel-qa no registry do MCP do pilot-ai
+- [x] Confirmar a resposta de initialize do servidor MCP do sentinel-qa
 
-### 승격/강등 로직
-- [x] 5회 실행 후 자동 판정
-- [x] 5/5 통과 → stable 자동 승격
-- [x] 3-4/5 통과 → quarantine + failure_reason 기록
-- [x] 0-2/5 통과 → rejected 처리
+### Validação do fluxo E2E
+- [x] Escrever o script de validação E2E do MCP (`scripts/verify-mcp-flow.mjs`)
+- [x] Fluxo completo initialize → list_apps → get_selectors → save_tests → run_tests → get_report — 6/6 passando
+- [ ] Confirmar o funcionamento do fluxo completo a partir de um comando em linguagem natural real no pilot-ai (depois da lógica de geração de código de teste do lado do pilot-ai estar implementada)
+- [ ] Confirmar o funcionamento do fluxo completo a partir de um comando em linguagem natural no Telegram/Slack
 
-### run_tests 연동
-- [x] 기본 실행: stable + new 테스트만 포함, rejected 제외
-- [x] `include_quarantine` 옵션 추가
-- [x] 테스트 실행 후 `recordRun()` 자동 호출
+### Confirmação de progress
+- [ ] Confirmar se as notificações de progress durante `run_tests` chegam ao pilot-ai
+- [ ] Confirmar se o pilot-ai retransmite o progress para o Telegram
 
-### 테스트
-- [x] TestStatusStore 단위 테스트 (17개 케이스 통과)
-
----
-
-## 7단계: 리포트 + Telegram 알림
-
-### Markdown 리포트 (기본)
-- [x] Markdown 리포트 생성 모듈 구현 (`report/markdown.ts`)
-- [x] `reports/<app_id>/<timestamp>/report.md` 경로 구조
-- [x] JSON 원본 결과 동시 저장 (`result.json`)
-- [x] ReportStore — 리포트 저장/조회 모듈 (`report/report-store.ts`)
-- [x] `run_tests` 실행 후 자동 리포트 저장
-- [x] `get_report`에서 최신 Markdown 리포트 반환
-- [x] 리포트 생성 단위 테스트 (6개 케이스 통과)
-
-### Allure / HTML 리포트 (후속)
-- [ ] Allure 리포트 생성 연동 (선택)
-- [ ] HTML 리포트 생성 (선택)
-
-### 알림 연동
-- [ ] Slack Webhook 알림 구현 (선택)
-- [ ] Telegram Bot 알림 구현 (선택)
-- [ ] 알림 포맷 정의 (통과/실패 요약, 링크)
+### Documentação de integração
+- [x] Escrever o guia de integração para a equipe do pilot-ai (`docs/pilot-ai-integration-guide.md`)
+- [x] Incluir o guia de resposta do pilot-ai para quando o sentinel-qa for atualizado
 
 ---
 
-## 8단계: GitHub Actions CI/CD 통합
+## Etapa 4: Bridge do Maestro (apps Flutter)
 
-### CI 파이프라인 (`ci.yml`)
-- [x] 빌드 + 테스트 워크플로우 (Node 20/22 매트릭스)
+### Pacote maestro-bridge
+- [x] Criar `packages/maestro-bridge/package.json`
+- [x] Instalar o Flutter SDK (3.41.4)
+- [x] Baixar a CLI do Maestro (precisa do Java instalado — `brew install --cask temurin`)
+
+### Padrão de Execução via YAML
+- [x] Escrever o YAML do Maestro em arquivo temporário
+- [x] Executar via `child_process.spawn("maestro test ... --format json")`
+- [x] Parsing do resultado JSON (`parseMaestroResult()`)
+- [x] Limpeza dos arquivos temporários
+- [x] Suporte a cancelamento via AbortSignal
+
+### Integração com o mcp-server
+- [x] Fazer o roteamento por plataforma na tool `run_tests` (web → playwright, flutter → maestro)
+- [x] Implementar as notificações de progress
+- [x] Implementar cancelamento
+- [x] Registrar (`recordRun`) e salvar o relatório após a execução do Maestro
+
+### Ambiente de CI/CD
+- [ ] Testar a execução com emulador Android + Maestro no GitHub Actions
+- [ ] Testar a execução com simulador iOS + Maestro no GitHub Actions (runner macos)
+
+### Testes
+- [x] Teste unitário do parser de resultado JSON do Maestro (9 casos passando)
+- [ ] Validação E2E rodando um YAML do Maestro em um app Flutter de exemplo (após instalar o Java)
+- [ ] Fluxo completo: pilot-ai → gera YAML do Maestro → sentinel-qa executa → retorna o resultado
+
+---
+
+## Etapa 5: Data Log QA (Validação de Eventos de Analytics)
+
+### Gerenciamento da spec de eventos
+- [x] Criar o diretório `registry/event-specs/`
+- [x] Definir o formato YAML da spec de eventos (`event_name`, `required_params`, `optional_params`)
+- [x] Escrever specs de eventos de exemplo (`registry/event-specs/fridgify.yaml`, `arden-web.yaml`)
+- [x] Adicionar o campo `event_spec` ao `apps.yaml`
+- [x] Implementar o carregamento da spec de eventos no `AppRegistry` (`getEventSpec()`)
+
+### Captura de eventos web (Playwright)
+- [x] Mapeamento de padrões de URL por SDK suportado (GA4, Firebase, Amplitude, Mixpanel)
+- [x] Parsing do nome do evento + parâmetros a partir das requisições capturadas (parser por SDK)
+- [x] `matchAnalyticsUrl()` — determina se a URL é um endpoint de analytics
+- [ ] Interceptação em tempo real via `page.on('request')` / `page.route()` (integração com o Playwright runner)
+
+### Captura de eventos Flutter (Maestro)
+- [ ] Definir o método de captura (`adb logcat` / proxy HTTP / Firebase Debug Mode)
+- [ ] Parsing de eventos de analytics a partir do log do dispositivo
+- [ ] Converter o resultado da captura em array de eventos estruturado
+
+### Lógica de validação contra a spec
+- [x] Implementar o motor de comparação (diff) entre eventos capturados e a spec (`event-validation/validator.ts`)
+- [x] Detectar eventos ausentes (esperados mas não disparados)
+- [x] Detectar eventos inesperados (disparados mas fora da spec)
+- [x] Detectar divergência de parâmetro (erro de tipo, parâmetro obrigatório ausente)
+- [x] Validar o input da spec de eventos com schema Zod (`eventSpecConfigSchema`)
+
+### Integração com o mcp-server
+- [x] Adicionar a opção `validate_events: boolean` ao schema de `run_tests`
+- [x] Incluir o resultado de `event_validation` na resposta de `get_report` (seção adicionada ao relatório Markdown)
+- [x] Definir o formato do resultado da validação de eventos (`matched`, `missing`, `unexpected`, `param_errors`)
+
+### Testes
+- [x] Teste unitário do motor de validação de eventos (11 casos passando)
+- [x] Teste unitário do matching de padrão de URL de analytics + parser por SDK (10 casos passando)
+- [x] Teste de validação do schema Zod da spec de eventos (7 casos passando)
+- [ ] Teste E2E de captura + validação de eventos de analytics em um app web de exemplo
+
+---
+
+## Etapa 6: Gerenciamento de Confiabilidade dos Testes (Quarantine)
+
+### Gerenciamento de estado
+- [x] Implementar o `TestStatusStore` (baseado em YAML, `tests/<app_id>/status.yaml`)
+- [x] CRUD do status do teste (new → stable / quarantine / rejected)
+- [x] Lógica de cálculo do pass_rate (baseado nas últimas 5 execuções)
+
+### Lógica de promoção/rebaixamento
+- [x] Decisão automática após 5 execuções
+- [x] 5/5 passou → promove automaticamente para stable
+- [x] 3-4/5 passou → quarantine + registra failure_reason
+- [x] 0-2/5 passou → marca como rejected
+
+### Integração com run_tests
+- [x] Execução padrão: inclui só testes stable + new, exclui rejected
+- [x] Adiciona a opção `include_quarantine`
+- [x] Chama `recordRun()` automaticamente após a execução do teste
+
+### Testes
+- [x] Teste unitário do TestStatusStore (17 casos passando)
+
+---
+
+## Etapa 7: Relatório + Notificação no Telegram
+
+### Relatório em Markdown (básico)
+- [x] Implementar o módulo de geração de relatório Markdown (`report/markdown.ts`)
+- [x] Estrutura de caminho `reports/<app_id>/<timestamp>/report.md`
+- [x] Salvar também o resultado bruto em JSON (`result.json`)
+- [x] ReportStore — módulo de salvamento/consulta de relatório (`report/report-store.ts`)
+- [x] Salvamento automático do relatório após a execução de `run_tests`
+- [x] `get_report` retorna o relatório Markdown mais recente
+- [x] Teste unitário da geração de relatório (6 casos passando)
+
+### Relatório Allure / HTML (próxima fase)
+- [ ] Integração com geração de relatório Allure (opcional)
+- [ ] Geração de relatório HTML (opcional)
+
+### Integração de notificações
+- [ ] Implementar notificação via Slack Webhook (opcional)
+- [ ] Implementar notificação via Telegram Bot (opcional)
+- [ ] Definir o formato da notificação (resumo de aprovação/falha, links)
+
+---
+
+## Etapa 8: Integração de CI/CD com GitHub Actions
+
+### Pipeline de CI (`ci.yml`)
+- [x] Workflow de build + teste (matriz Node 20/22)
 - [x] `npx playwright install chromium --with-deps`
-- [x] 테스트 결과 artifact 업로드
+- [x] Upload do artifact com o resultado dos testes
 
-### Playwright 전용 (`playwright.yml`)
-- [x] paths 필터로 변경 시에만 실행
-- [x] Playwright 리포트 artifact (30일 보관)
-- [x] 실패 시 스크린샷/trace 업로드
+### Workflow específico do Playwright (`playwright.yml`)
+- [x] Executa só quando há mudança nos paths filtrados
+- [x] Artifact do relatório do Playwright (retenção de 30 dias)
+- [x] Upload de screenshot/trace em caso de falha
 
-### 릴리스 (`release.yml`)
-- [x] workflow_dispatch로 수동 트리거
-- [x] 버전 bump + npm publish + GitHub Release
+### Release (`release.yml`)
+- [x] Trigger manual via workflow_dispatch
+- [x] Bump de versão + npm publish + GitHub Release
 
-### Maestro CI (후속)
-- [ ] Android 에뮬레이터 + Maestro 워크플로우
-- [ ] iOS 시뮬레이터 + Maestro 워크플로우 (macos runner)
+### CI do Maestro (próxima fase)
+- [ ] Workflow com emulador Android + Maestro
+- [ ] Workflow com simulador iOS + Maestro (runner macos)
 
 ---
 
-## 9단계: 오픈소스 공개
+## Etapa 9: Abertura como Open Source
 
-### 문서
-- [x] README.md (프로젝트 소개, 아키텍처, 퀵스타트, MCP 도구 스펙)
-- [x] CONTRIBUTING.md (기여 가이드)
+### Documentação
+- [x] README.md (apresentação do projeto, arquitetura, quick start, spec das tools do MCP)
+- [x] CONTRIBUTING.md (guia de contribuição)
 - [x] LICENSE (MIT)
 - [x] CHANGELOG.md
 
-### 코드 정리
-- [ ] Eodin 브랜드 종속 코드 제거
-- [ ] 하드코딩된 내부 URL/경로 제거
-- [ ] 민감 정보 유출 점검 (API 키, 내부 도메인 등)
+### Limpeza de código
+- [ ] Remover código dependente da marca Eodin
+- [ ] Remover URLs/caminhos internos hardcoded
+- [ ] Verificar vazamento de informação sensível (chaves de API, domínios internos etc.)
 
-### npm 배포
-- [ ] `npm publish` 테스트 (dry-run)
-- [ ] `npx sentinel-qa` 설치 → 실행 E2E 검증
-- [ ] GitHub Releases 태깅
+### Publicação no npm
+- [ ] Testar `npm publish` (dry-run)
+- [ ] Validação E2E: instalar via `npx sentinel-qa` → executar
+- [ ] Criar as tags no GitHub Releases
 
-### 커뮤니티
-- [x] GitHub Issues 템플릿 (bug report, feature request)
-- [ ] GitHub Discussions 활성화 (선택)
+### Comunidade
+- [x] Templates de GitHub Issues (bug report, feature request)
+- [ ] Ativar o GitHub Discussions (opcional)
 
 ---
 
-## 미결 사항 (결정 필요)
+## Pontos em Aberto (decisão necessária)
 
-- [ ] 첫 번째 검증 대상 앱 선정 (Fridgify 웹? Tempy?)
-- [ ] PRD 소스 확정 (Notion API 연동 vs Markdown 파일)
-- [ ] GitHub 레포 공개 시점 및 라이선스 확정
-- [ ] Maestro 테스트 실행 환경 (로컬 시뮬레이터 vs CI 에뮬레이터)
-- [ ] 리포트 호스팅 방식 (S3, GitHub Pages 등)
-- [ ] 데이터 로그 QA: 지원할 analytics SDK 목록 확정 (Firebase, Amplitude, GA4 등)
-- [ ] 데이터 로그 QA: Flutter 이벤트 캡처 방식 확정 (adb logcat vs HTTP 프록시 vs Firebase Debug View)
+- [ ] Escolher o primeiro app alvo para validação (Fridgify web? Tempy?)
+- [ ] Definir a fonte do PRD (integração com a API do Notion vs. arquivo Markdown)
+- [ ] Definir o momento de tornar o repositório público no GitHub e a licença
+- [ ] Ambiente de execução dos testes do Maestro (simulador local vs. emulador de CI)
+- [ ] Forma de hospedar os relatórios (S3, GitHub Pages etc.)
+- [ ] Data log QA: definir a lista de SDKs de analytics suportados (Firebase, Amplitude, GA4 etc.)
+- [ ] Data log QA: definir o método de captura de eventos no Flutter (adb logcat vs. proxy HTTP vs. Firebase Debug View)

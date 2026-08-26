@@ -101,9 +101,9 @@ apps:
 **Selectors** (`registry/selectors/<app>.yaml`) map logical names to UI locators. The planner is given this map so generated code references stable names instead of inventing selectors:
 
 ```yaml
-add_ingredient_button: "재료 추가"
-generate_button: "레시피 생성"
-recipe_card: "레시피 생성 완료"
+add_ingredient_button: "Adicionar ingrediente"
+generate_button: "Gerar receita"
+recipe_card: "Receita gerada"
 ```
 
 **Event specs** (`registry/event-specs/<app>.yaml`) declare the analytics events a flow must emit, with required and optional parameter types:

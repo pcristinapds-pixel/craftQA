@@ -106,9 +106,9 @@ apps:
 **Selectors** (`registry/selectors/<app>.yaml`) mapeiam nomes lógicos para localizadores de UI. O planner recebe esse mapa para que o código gerado referencie nomes estáveis em vez de inventar seletores:
 
 ```yaml
-add_ingredient_button: "재료 추가"
-generate_button: "레시피 생성"
-recipe_card: "레시피 생성 완료"
+add_ingredient_button: "Adicionar ingrediente"
+generate_button: "Gerar receita"
+recipe_card: "Receita gerada"
 ```
 
 **Event specs** (`registry/event-specs/<app>.yaml`) declaram os eventos de analytics que um fluxo precisa emitir, com os tipos de parâmetros obrigatórios e opcionais:

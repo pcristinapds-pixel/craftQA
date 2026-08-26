@@ -1,272 +1,272 @@
-# sentinel-qa Agent 개발 체크리스트
+# Checklist de Desenvolvimento do Agent sentinel-qa
 
 > PRD: `docs/agent/sentinel-qa-agent-prd.md` (v1.1)
-> 코드 리뷰: `docs/prd/code-review-report.md`
-> 최종 업데이트: 2026-03-31
+> Code review: `docs/prd/code-review-report.md`
+> Última atualização: 2026-03-31
 
 ---
 
-## 0단계: 프로젝트 구조 전환
+## Etapa 0: Migração da Estrutura do Projeto
 
-### 0-1. 모노레포 해체
-- [x] `packages/` 하위 소스를 `src/`로 평탄화
+### 0-1. Desmembramento do monorepo
+- [x] Achata o código de `packages/` em `src/`
   - [x] `packages/playwright-runner/src/` → `src/runners/playwright/`
-  - [x] `packages/maestro-bridge/src/` → `src/runners/maestro/` (Patrol 전환 전 임시 보존)
+  - [x] `packages/maestro-bridge/src/` → `src/runners/maestro/` (mantido temporariamente até a migração para o Patrol)
   - [x] `packages/mcp-server/src/event-validation/` → `src/event-validation/`
   - [x] `packages/mcp-server/src/store/test-status-store.ts` → `src/store/`
   - [x] `packages/mcp-server/src/report/` → `src/report/`
   - [x] `packages/mcp-server/src/registry/` → `src/registry/`
   - [x] `packages/mcp-server/src/utils/` → `src/utils/`
-- [x] 루트 `package.json`에서 `workspaces` 제거
-- [x] 하위 `package.json` 3개 제거, 의존성을 루트로 통합
-- [x] `turbo.json` 삭제
-- [x] `tsconfig.json` 단일화 (base + packages 구조 → 단일 tsconfig)
-- [x] 빌드 스크립트 수정 (`tsc` 단독 빌드)
-- [x] `npm run build` 정상 확인
-- [x] `npm run test` 정상 확인
+- [x] Remove `workspaces` do `package.json` raiz
+- [x] Remove os 3 `package.json` dos subpacotes, unifica as dependências na raiz
+- [x] Apaga o `turbo.json`
+- [x] Unifica o `tsconfig.json` (estrutura base + packages → um único tsconfig)
+- [x] Corrige o script de build (build único via `tsc`)
+- [x] Confirma que `npm run build` funciona
+- [x] Confirma que `npm run test` funciona
 
-### 0-2. MCP 코드 제거
-- [x] `packages/mcp-server/src/index.ts` 삭제 (MCP 서버 부트스트랩)
-- [x] `packages/mcp-server/src/tools/` 전체 삭제 (5개 MCP 도구)
-- [x] `packages/mcp-server/src/schemas/tools.ts` 삭제 (MCP 입력 스키마)
-- [x] `packages/mcp-server/src/store/test-store.ts` 삭제 (인메모리 TC 저장소)
-- [x] `@modelcontextprotocol/sdk` 의존성 제거
-- [x] MCP 관련 테스트 삭제 (해당 모듈 테스트만)
-- [x] `scripts/verify-mcp-flow.mjs` 삭제
-- [x] `bin` 엔트리 및 `postbuild` shebang 스크립트 정리
+### 0-2. Remoção do código MCP
+- [x] Remove `packages/mcp-server/src/index.ts` (bootstrap do servidor MCP)
+- [x] Remove toda a pasta `packages/mcp-server/src/tools/` (5 tools do MCP)
+- [x] Remove `packages/mcp-server/src/schemas/tools.ts` (schema de input do MCP)
+- [x] Remove `packages/mcp-server/src/store/test-store.ts` (storage de TC em memória)
+- [x] Remove a dependência `@modelcontextprotocol/sdk`
+- [x] Remove os testes relacionados ao MCP (só os testes desses módulos)
+- [x] Remove `scripts/verify-mcp-flow.mjs`
+- [x] Limpa a entrada `bin` e o script de shebang do `postbuild`
 
-### 0-3. 보안 이슈 수정 (코드 리뷰 C-01, C-02)
-- [x] Playwright `validator.ts` — AST 기반 검증으로 강화
-  - [x] TypeScript Compiler API로 CallExpression, ImportDeclaration 검사
-  - [x] 허용 모듈 화이트리스트 (`@playwright/test` 등)
-  - [x] `globalThis[...]` 동적 접근 패턴 차단
-  - [x] 기존 정규식 테스트를 AST 기반으로 마이그레이션
-- [x] Maestro/Patrol runner — `test.id` path traversal 방지
-  - [x] `sanitizeId()` 함수 추가 (알파벳/숫자/하이픈/언더스코어만 허용)
-  - [x] 결과 경로가 tempDir 내부인지 검증
-  - [x] 테스트 추가
+### 0-3. Correção de issues de segurança (code review C-01, C-02)
+- [x] `validator.ts` do Playwright — reforçado com validação baseada em AST
+  - [x] Inspeciona CallExpression e ImportDeclaration via TypeScript Compiler API
+  - [x] Allowlist de módulos permitidos (`@playwright/test`, etc.)
+  - [x] Bloqueia padrões de acesso dinâmico como `globalThis[...]`
+  - [x] Migra os testes antigos baseados em regex para a versão baseada em AST
+- [x] Runner Maestro/Patrol — previne path traversal via `test.id`
+  - [x] Adiciona a função `sanitizeId()` (permite só alfanumérico/hífen/underscore)
+  - [x] Valida que o caminho do resultado fica dentro do tempDir
+  - [x] Adiciona teste
 
-### 0-4. 재활용 모듈 품질 개선 (코드 리뷰 H-02 ~ H-05)
-- [x] `yaml-loader.ts` — Zod 스키마 검증 통합
-  - [x] `loadYaml<T>(path, schema)` 시그니처로 변경 (선택적 schema 파라미터)
-  - [ ] 호출처 업데이트 (registry, event-spec — 스키마 정의 후 적용)
-- [x] `test-status-store.ts` — `recordBatch()` 메서드 추가
-  - [x] N개 결과를 1회 파일 I/O로 기록
-  - [x] 기존 `recordRun()` 유지 (recordBatch 위임)
-  - [x] 테스트 추가
-- [x] Runner 공통 인터페이스 정의
-  - [x] `UnifiedRunResult` 타입 생성 (`src/types/runner.ts`)
-  - [ ] Playwright, Maestro/Patrol 양쪽에서 구현 (러너 통합 시 적용)
-- [ ] Event capture — "not yet implemented" 경고 반환 (러너 통합 시 구현)
+### 0-4. Melhoria de qualidade dos módulos reaproveitados (code review H-02 ~ H-05)
+- [x] `yaml-loader.ts` — integra validação com schema Zod
+  - [x] Muda a assinatura para `loadYaml<T>(path, schema)` (parâmetro schema opcional)
+  - [ ] Atualiza os pontos de chamada (registry, event-spec — aplicar depois de definir os schemas)
+- [x] `test-status-store.ts` — adiciona o método `recordBatch()`
+  - [x] Grava N resultados em uma única operação de I/O
+  - [x] Mantém `recordRun()` existente (delega para o recordBatch)
+  - [x] Adiciona teste
+- [x] Define a interface comum dos runners
+  - [x] Cria o tipo `UnifiedRunResult` (`src/types/runner.ts`)
+  - [ ] Implementa em ambos, Playwright e Maestro/Patrol (aplicar na integração dos runners)
+- [ ] Captura de eventos — retornar aviso de "ainda não implementado" (implementar na integração dos runners)
 
-### 0-5. 문서 및 설정 업데이트
-- [x] `CLAUDE.md` 업데이트
-  - [x] "No LLM calls" 제약 제거
-  - [x] 단일 패키지 구조 반영
-  - [x] 새 빌드/테스트 커맨드 반영
-  - [x] 워크플로우 6단계로 업데이트 (개발→빌드→코드리뷰→테스트→체크리스트→커밋)
-- [x] 기존 `docs/sentinel-ai-planning.md`, `docs/sentinel-ai-checklist.md` 아카이브 표시
+### 0-5. Atualização de documentação e configuração
+- [x] Atualiza o `CLAUDE.md`
+  - [x] Remove a restrição "sem chamadas a LLM"
+  - [x] Reflete a estrutura de pacote único
+  - [x] Reflete os novos comandos de build/teste
+  - [x] Atualiza o workflow para 6 etapas (desenvolver→build→code review→teste→checklist→commit)
+- [x] Marca `docs/sentinel-ai-planning.md` e `docs/sentinel-ai-checklist.md` existentes como arquivados
 
 ---
 
-## 1단계: CLI 트리거 + Analyzer
+## Etapa 1: Trigger da CLI + Analyzer
 
-### 1-1. 새 진입점 (`src/index.ts`)
-- [x] 에이전트 메인 엔트리포인트 생성
-- [x] CLI 파서 구현 (인자: `--app`, `--pr`, `--base-branch`, `--diff`, `--validate-events`, `--prd`)
-- [x] `AgentConfig` 인터페이스 정의
-- [x] `npx sentinel-qa run` 으로 실행 가능하도록 `bin` 등록
-- [x] `--help` 출력
+### 1-1. Novo ponto de entrada (`src/index.ts`)
+- [x] Cria o ponto de entrada principal do agente
+- [x] Implementa o parser da CLI (argumentos: `--app`, `--pr`, `--base-branch`, `--diff`, `--validate-events`, `--prd`)
+- [x] Define a interface `AgentConfig`
+- [x] Registra o `bin` para permitir a execução via `npx sentinel-qa run`
+- [x] Implementa a saída do `--help`
 
 ### 1-2. Analyzer (`src/agent/analyzer.ts`)
-- [x] `AnalysisContext` 인터페이스 정의
-- [x] `git diff <baseBranch>...HEAD` 실행 → diff 문자열 수집
-- [x] PRD 파일 로드 (Markdown 읽기)
-- [x] AppRegistry에서 앱 정보 조회
-- [x] 셀렉터 로드
-- [x] 이벤트 스펙 로드 (선택)
-- [x] 기존 테스트 상태 로드 (quarantine 정보)
-- [x] 테스트 작성
+- [x] Define a interface `AnalysisContext`
+- [x] Executa `git diff <baseBranch>...HEAD` → coleta a string do diff
+- [x] Carrega o arquivo de PRD (leitura de Markdown)
+- [x] Consulta as informações do app no AppRegistry
+- [x] Carrega os seletores
+- [x] Carrega a spec de eventos (opcional)
+- [x] Carrega o status dos testes existentes (informação de quarantine)
+- [x] Escreve os testes
 
-### 1-3. 설정 파일 (`sentinel-qa.config.yaml`)
-- [x] 설정 스키마 Zod 정의 (anthropic, slack, github, test, cost 섹션)
-- [x] 설정 로더 구현 (파일 + 환경 변수 오버라이드)
-- [x] 기본값 처리
-- [x] `confidence_threshold` 설정 포함
-- [x] `cost.track_tokens`, `cost.max_tokens_per_run` 설정 포함
+### 1-3. Arquivo de configuração (`sentinel-qa.config.yaml`)
+- [x] Define o schema Zod de configuração (seções anthropic, slack, github, test, cost)
+- [x] Implementa o loader de configuração (arquivo + override por variável de ambiente)
+- [x] Trata os valores padrão
+- [x] Inclui a configuração `confidence_threshold`
+- [x] Inclui as configurações `cost.track_tokens` e `cost.max_tokens_per_run`
 
 ---
 
-## 2단계: Planner (Claude API)
+## Etapa 2: Planner (Claude API)
 
-### 2-1. LLM 인터페이스 (`src/agent/llm-client.ts`)
-- [x] `LLMClient` 인터페이스 정의 (`call`, `getTotalUsage`)
-- [x] `ClaudeLLMClient` 구현
-- [x] `@anthropic-ai/sdk` 설치 및 클라이언트 초기화
-- [x] 토큰 사용량 로깅 (input/output tokens per call)
-- [x] `max_tokens_per_run` 초과 시 중단 로직
+### 2-1. Interface de LLM (`src/agent/llm-client.ts`)
+- [x] Define a interface `LLMClient` (`call`, `getTotalUsage`)
+- [x] Implementa o `ClaudeLLMClient`
+- [x] Instala o `@anthropic-ai/sdk` e inicializa o client
+- [x] Loga o uso de tokens (tokens de entrada/saída por chamada)
+- [x] Lógica de aborto quando `max_tokens_per_run` é excedido
 
 ### 2-2. Planner (`src/agent/planner.ts`)
-- [x] `PlannedTest` 인터페이스 정의
-- [x] 시스템 프롬프트 작성
-  - [x] 역할 정의 (시니어 QA 엔지니어)
-  - [x] 코드 생성 규칙 (셀렉터 사용, 독립 테스트, 보안 제약)
-  - [x] **smart wait 규칙** (`waitForSelector` 필수, `waitForTimeout` 금지)
-  - [x] **retry-friendly 패턴** (`expect().toBeVisible()` 등 auto-retry assertion 우선)
-  - [x] 출력 형식 (JSON 배열)
-  - [x] **few-shot 예제** (Playwright 올바른 테스트 2개)
-- [x] 유저 프롬프트 조립 (PRD + diff + selectors + event specs)
-- [x] **기존 stable 테스트 목록 포함** → 중복 생성 방지
-- [x] Claude API 호출 → JSON 응답 파싱
-- [x] 응답 Zod 검증 (`PlannedTest[]`)
-- [x] **Self-critique 단계** — 생성 코드를 Claude가 재검토 (셀렉터 오용, 누락 assertion, 보안 위반)
-- [x] 에러 핸들링 (API 실패, 파싱 실패, 빈 응답)
-- [x] 테스트 작성 (모킹된 API 응답)
+- [x] Define a interface `PlannedTest`
+- [x] Escreve o prompt de sistema
+  - [x] Define o papel (engenheiro(a) de QA sênior)
+  - [x] Regras de geração de código (uso dos seletores, testes independentes, restrições de segurança)
+  - [x] **Regra de smart wait** (`waitForSelector` obrigatório, `waitForTimeout` proibido)
+  - [x] **Padrão retry-friendly** (prioriza assertions com auto-retry como `expect().toBeVisible()`)
+  - [x] Formato de saída (array JSON)
+  - [x] **Exemplos few-shot** (2 testes corretos em Playwright)
+- [x] Monta o prompt do usuário (PRD + diff + seletores + spec de eventos)
+- [x] **Inclui a lista de testes stable existentes** → evita gerar duplicados
+- [x] Chama a Claude API → faz o parsing da resposta JSON
+- [x] Valida a resposta com Zod (`PlannedTest[]`)
+- [x] **Etapa de self-critique** — a Claude revisa o código gerado (uso incorreto de seletor, assertion faltando, violação de segurança)
+- [x] Tratamento de erro (falha da API, falha de parsing, resposta vazia)
+- [x] Escreve os testes (com resposta de API mockada)
 
-### 2-3. 프롬프트 템플릿
-- [x] Playwright 코드 생성용 프롬프트 + few-shot 예제
-- [x] Patrol 코드 생성용 프롬프트 (few-shot은 Patrol 러너 단계에서 추가)
-- [x] diff 기반 TC vs PRD 기반 TC 구분 로직 (trigger 필드로 구분)
-
----
-
-## 3단계: Playwright 러너 통합
-
-### 3-1. 러너 통합 (`src/runners/playwright.ts`)
-- [x] 기존 `packages/playwright-runner` 코어 로직 이동 (0단계에서 완료)
-- [x] `UnifiedRunResult` 인터페이스 — agent에서 변환하여 사용
-- [x] AST 기반 validator 적용 — agent/index.ts에서 실행 전 검증
-- [ ] 이벤트 캡처 통합 (`page.route()` 인터셉트)
-  - [ ] `capture-patterns.ts`의 URL 매칭 연동
-  - [ ] `CapturedEvent[]` 수집 로직
-- [x] AbortSignal 기반 취소 유지
-- [x] 기존 테스트 마이그레이션 + 추가
-
-### 3-2. 첫 웹 앱 E2E 검증
-- [ ] 검증 대상 앱 선정 (arden-web 권장 — 웹이므로 Playwright 즉시 사용 가능)
-- [ ] 실제 PR diff로 TC 생성 → Playwright 실행 → 결과 확인
-- [ ] 생성된 테스트 코드 품질 검토
-- [ ] smart wait / retry-friendly 패턴 적용 여부 확인
+### 2-3. Templates de prompt
+- [x] Prompt de geração de código Playwright + exemplos few-shot
+- [x] Prompt de geração de código Patrol (few-shot adicionado na etapa do runner Patrol)
+- [x] Lógica de distinção entre TC baseado em diff vs. baseado em PRD (via campo trigger)
 
 ---
 
-## 4단계: Reporter
+## Etapa 3: Integração do Runner Playwright
 
-### 4-1. 리포트 생성 (`src/agent/reporter.ts`)
-- [ ] 기존 `report/markdown.ts` 연동
-- [ ] `AgentResult` → Markdown 리포트 변환
-- [ ] **confidence score** 포함 (테스트별 신뢰도)
-- [ ] **API 토큰 사용량** 리포트에 포함
-- [ ] `reports/<appId>/<timestamp>/` 파일 저장 유지
-- [ ] JSON 결과 저장 유지
+### 3-1. Integração do runner (`src/runners/playwright.ts`)
+- [x] Move a lógica central do `packages/playwright-runner` existente (concluído na Etapa 0)
+- [x] Interface `UnifiedRunResult` — convertida e usada pelo agent
+- [x] Aplica o validator baseado em AST — validação executada em agent/index.ts antes de rodar
+- [ ] Integração de captura de eventos (interceptação via `page.route()`)
+  - [ ] Conectar com o matching de URL do `capture-patterns.ts`
+  - [ ] Lógica de coleta do `CapturedEvent[]`
+- [x] Mantém o cancelamento via AbortSignal
+- [x] Migra os testes existentes + adiciona novos
 
-### 4-2. PR 코멘트
-- [ ] `@octokit/rest` 설치
-- [ ] GitHub API 인증 (GITHUB_TOKEN)
-- [ ] PR 코멘트 생성/업데이트 로직
-  - [ ] **`[AI-Generated]` 라벨** 포함
-  - [ ] 전체 통과 + 고신뢰(≥ 0.7): ✅ 머지 가능
-  - [ ] 전체 통과 + 저신뢰(< 0.7): ⚠️ warning으로 표시 (블록하지 않음)
-  - [ ] 실패: 실패 테스트 상세 + 이벤트 검증 결과
-- [ ] 이전 sentinel-qa 코멘트가 있으면 업데이트 (중복 방지)
+### 3-2. Primeira validação E2E em app web
+- [ ] Escolher o app alvo da validação (arden-web recomendado — já é web, então o Playwright pode ser usado direto)
+- [ ] Gerar TC a partir de um diff real de PR → executar no Playwright → conferir o resultado
+- [ ] Revisar a qualidade do código de teste gerado
+- [ ] Verificar se os padrões de smart wait / retry-friendly foram aplicados
 
 ---
 
-## 5단계: GitHub Actions 워크플로우
+## Etapa 4: Reporter
 
-### 5-1. 워크플로우 파일 (`sentinel-qa.yml`)
-- [ ] PR 이벤트 트리거 (opened, synchronize)
-- [ ] Node.js 20 설정
-- [ ] `fetch-depth: 0` (full history)
-- [ ] 환경 변수 주입 (ANTHROPIC_API_KEY, SLACK_WEBHOOK_URL, GITHUB_TOKEN)
-- [ ] `npx sentinel-qa run` 실행
-- [ ] 실패 시 exit code 처리
+### 4-1. Geração do relatório (`src/agent/reporter.ts`)
+- [ ] Integrar com o `report/markdown.ts` existente
+- [ ] Converter `AgentResult` → relatório em Markdown
+- [ ] Incluir o **confidence score** (confiabilidade por teste)
+- [ ] Incluir o **uso de tokens da API** no relatório
+- [ ] Manter a gravação em `reports/<appId>/<timestamp>/`
+- [ ] Manter a gravação do resultado em JSON
 
-### 5-2. GitHub Actions 트리거 (`src/triggers/github-action.ts`)
-- [ ] 환경 변수에서 `AgentConfig` 조립
-- [ ] `GITHUB_EVENT_PATH`에서 PR 정보 파싱
-- [ ] agent 메인 루프 호출
-- [ ] exit code 반환 (0: 통과, 1: 실패)
-
----
-
-## 6단계: Slack 버그 리포트 + pilot-ai 루프
-
-### 6-1. Slack 연동
-- [ ] `@slack/webhook` 설치
-- [ ] `BugReport` → Slack Block Kit 메시지 변환
-- [ ] Webhook URL 설정 (환경 변수)
-- [ ] 전송 실패 시 fallback (로그 출력)
-- [ ] 테스트 (모킹된 webhook)
-
-### 6-2. 재시도 루프
-- [ ] `agent/index.ts`에 재시도 로직 추가
-- [ ] 최대 재시도 횟수 설정 (`maxRetries`, default: 3)
-- [ ] 재커밋 감지 (GitHub Actions `synchronize` 이벤트)
-- [ ] 3회 초과 시 "수동 개입 필요" Slack 알림
-- [ ] 재시도 카운트를 리포트에 포함
+### 4-2. Comentário no PR
+- [ ] Instalar o `@octokit/rest`
+- [ ] Autenticação com a API do GitHub (GITHUB_TOKEN)
+- [ ] Lógica de criação/atualização do comentário no PR
+  - [ ] Incluir a label **`[AI-Generated]`**
+  - [ ] Tudo passou + alta confiança (≥ 0.7): ✅ pode dar merge
+  - [ ] Tudo passou + baixa confiança (< 0.7): ⚠️ exibir como warning (sem bloquear)
+  - [ ] Falha: detalhe dos testes que falharam + resultado da validação de eventos
+- [ ] Atualizar o comentário anterior do sentinel-qa, se existir (evita duplicar)
 
 ---
 
-## 7단계: Patrol 러너 (Flutter)
+## Etapa 5: Workflow do GitHub Actions
 
-### 7-1. Patrol 코드 생성 품질 검증 (조기 검증)
-- [ ] Claude API로 Patrol Dart 코드 생성 테스트 (Maestro YAML보다 난이도 높음)
-- [ ] 생성 품질 미달 시 Maestro YAML 병행 전략 수립
+### 5-1. Arquivo de workflow (`sentinel-qa.yml`)
+- [ ] Trigger em eventos de PR (opened, synchronize)
+- [ ] Configurar Node.js 20
+- [ ] `fetch-depth: 0` (histórico completo)
+- [ ] Injetar variáveis de ambiente (ANTHROPIC_API_KEY, SLACK_WEBHOOK_URL, GITHUB_TOKEN)
+- [ ] Executar `npx sentinel-qa run`
+- [ ] Tratar o exit code em caso de falha
 
-### 7-2. Patrol 러너 구현 (`src/runners/patrol.ts`)
-- [ ] Patrol CLI 연동 (`patrol test`)
-- [ ] Dart 테스트 코드를 임시 파일에 기록
-- [ ] 결과 파싱
-- [ ] `UnifiedRunResult` 구현
-- [ ] 기존 Maestro bridge 코드 참고 후 삭제
-
-### 7-3. Flutter 환경 검증
-- [ ] GitHub Actions macOS runner에서 Flutter SDK 설치
-- [ ] iOS 시뮬레이터 실행 확인
-- [ ] Patrol 테스트 실행 확인
-- [ ] 검증 대상 앱으로 E2E 테스트
+### 5-2. Trigger do GitHub Actions (`src/triggers/github-action.ts`)
+- [ ] Montar o `AgentConfig` a partir das variáveis de ambiente
+- [ ] Fazer o parsing das informações do PR a partir de `GITHUB_EVENT_PATH`
+- [ ] Chamar o loop principal do agent
+- [ ] Retornar o exit code (0: passou, 1: falhou)
 
 ---
 
-## 8단계: 오픈소스 공개
+## Etapa 6: Bug Report no Slack + Loop com o pilot-ai
 
-### 8-1. 문서
-- [ ] README.md 전면 재작성 (에이전트 소개, Quick Start, 설정법)
-- [ ] CONTRIBUTING.md 작성
-- [ ] LICENSE 확인 (MIT)
+### 6-1. Integração com o Slack
+- [ ] Instalar `@slack/webhook`
+- [ ] Converter `BugReport` em mensagem no formato Block Kit do Slack
+- [ ] Configurar a Webhook URL (variável de ambiente)
+- [ ] Fallback em caso de falha no envio (registrar em log)
+- [ ] Teste (com webhook mockado)
 
-### 8-2. 패키지
-- [ ] `package.json` 정리 (keywords, description, repository)
-- [ ] npm 배포 테스트 (`npm pack` → 검토)
-- [ ] `npx sentinel-qa run --help` 동작 확인
-- [ ] GitHub 레포 public 전환
+### 6-2. Loop de retry
+- [ ] Adicionar a lógica de retry em `agent/index.ts`
+- [ ] Configurar o número máximo de tentativas (`maxRetries`, default: 3)
+- [ ] Detectar novo commit (evento `synchronize` do GitHub Actions)
+- [ ] Notificar no Slack "intervenção manual necessária" após 3 tentativas
+- [ ] Incluir a contagem de tentativas no relatório
 
 ---
 
-## 횡단 관심사 (전 단계 공통)
+## Etapa 7: Runner Patrol (Flutter)
 
-### 테스트
-- [ ] 각 단계 완료 시 `npm run test` 통과 확인
-- [ ] 새 모듈마다 유닛 테스트 작성
-- [ ] CI에서 테스트 자동 실행
+### 7-1. Validação antecipada da qualidade de geração de código Patrol
+- [ ] Testar a geração de código Dart do Patrol via Claude API (mais difícil do que YAML do Maestro)
+- [ ] Se a qualidade gerada não for suficiente, definir estratégia de uso em paralelo com o Maestro YAML
 
-### 타입 안전성
-- [ ] `any` 타입 사용 금지
-- [ ] 외부 입력(YAML, API 응답, env vars)은 Zod로 검증
-- [ ] 공통 타입은 `src/types/` 에 집중
+### 7-2. Implementação do runner Patrol (`src/runners/patrol.ts`)
+- [ ] Integração com a CLI do Patrol (`patrol test`)
+- [ ] Gravar o código de teste Dart em arquivo temporário
+- [ ] Fazer o parsing do resultado
+- [ ] Implementar `UnifiedRunResult`
+- [ ] Consultar o código da bridge do Maestro existente antes de removê-lo
 
-### 로깅
-- [ ] 구조화된 로깅 적용 (JSON 포맷, level + timestamp)
-- [ ] 민감 정보 (API 키 등) 로그 출력 금지
+### 7-3. Validação do ambiente Flutter
+- [ ] Instalar o Flutter SDK no runner macOS do GitHub Actions
+- [ ] Confirmar a execução do simulador iOS
+- [ ] Confirmar a execução dos testes do Patrol
+- [ ] Rodar o teste E2E completo no app alvo de validação
 
-### 보안
-- [ ] 생성된 테스트 코드는 반드시 AST validator 통과 후 실행
-- [ ] 파일 경로에 사용자 입력 포함 시 sanitize
-- [ ] 환경 변수로 시크릿 관리 (하드코딩 금지)
-- [ ] 네트워크 이그레스 — 테스트 실행 중 대상 앱 URL + analytics 엔드포인트만 허용 고려
+---
 
-### 비용 관리
-- [ ] Claude API 토큰 사용량 매 호출 로깅
-- [ ] 런당 누적 토큰 추적 → `max_tokens_per_run` 초과 시 중단
-- [ ] 리포트에 총 토큰 사용량 표시
+## Etapa 8: Abertura como Open Source
+
+### 8-1. Documentação
+- [ ] Reescrever completamente o README.md (apresentação do agente, Quick Start, como configurar)
+- [ ] Escrever o CONTRIBUTING.md
+- [ ] Confirmar a LICENSE (MIT)
+
+### 8-2. Pacote
+- [ ] Organizar o `package.json` (keywords, description, repository)
+- [ ] Testar a publicação no npm (`npm pack` → revisar)
+- [ ] Confirmar o funcionamento de `npx sentinel-qa run --help`
+- [ ] Tornar o repositório do GitHub público
+
+---
+
+## Preocupações Transversais (comuns a todas as etapas)
+
+### Testes
+- [ ] Confirmar que `npm run test` passa ao final de cada etapa
+- [ ] Escrever teste unitário para cada novo módulo
+- [ ] Executar os testes automaticamente no CI
+
+### Segurança de tipos
+- [ ] Proibido usar o tipo `any`
+- [ ] Validar todo input externo (YAML, resposta de API, variáveis de ambiente) com Zod
+- [ ] Concentrar os tipos compartilhados em `src/types/`
+
+### Logging
+- [ ] Aplicar logging estruturado (formato JSON, level + timestamp)
+- [ ] Proibido logar informação sensível (chaves de API, etc.)
+
+### Segurança
+- [ ] Todo código de teste gerado precisa passar pelo AST validator antes de rodar
+- [ ] Sanitizar caminhos de arquivo que incluam input do usuário
+- [ ] Gerenciar segredos via variáveis de ambiente (proibido hardcode)
+- [ ] Egress de rede — considerar permitir apenas a URL do app alvo + endpoints de analytics durante a execução dos testes
+
+### Gestão de custo
+- [ ] Logar o uso de tokens da Claude API a cada chamada
+- [ ] Rastrear o total acumulado por execução → abortar se exceder `max_tokens_per_run`
+- [ ] Exibir o uso total de tokens no relatório

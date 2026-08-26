@@ -13,9 +13,9 @@ describe('runPlaywrightTests E2E', () => {
         code: `
 import { test, expect } from '@playwright/test';
 
-test('should load example.com', async ({ page }) => {
-  await page.goto('https://example.com');
-  await expect(page.locator('h1')).toContainText('Example Domain');
+test('should load google.com', async ({ page }) => {
+  await page.goto('https://www.google.com');
+  await expect(page).toHaveTitle(/Google/);
 });
 `,
       },
@@ -43,7 +43,7 @@ test('should load example.com', async ({ page }) => {
 import { test, expect } from '@playwright/test';
 
 test('should fail on missing element', async ({ page }) => {
-  await page.goto('https://example.com');
+  await page.goto('https://www.google.com');
   await expect(page.locator('#non-existent')).toBeVisible({ timeout: 2000 });
 });
 `,
@@ -70,8 +70,8 @@ test('should fail on missing element', async ({ page }) => {
 import { test, expect } from '@playwright/test';
 
 test('should pass', async ({ page }) => {
-  await page.goto('https://example.com');
-  await expect(page.locator('h1')).toBeVisible();
+  await page.goto('https://www.google.com');
+  await expect(page).toHaveTitle(/Google/);
 });
 `,
       },
@@ -82,7 +82,7 @@ test('should pass', async ({ page }) => {
 import { test, expect } from '@playwright/test';
 
 test('should fail', async ({ page }) => {
-  await page.goto('https://example.com');
+  await page.goto('https://www.google.com');
   await expect(page.locator('#does-not-exist')).toBeVisible({ timeout: 2000 });
 });
 `,
@@ -135,7 +135,7 @@ test('steal secrets', async () => {
 import { test } from '@playwright/test';
 
 test('slow test', async ({ page }) => {
-  await page.goto('https://example.com');
+  await page.goto('https://www.google.com');
   await page.waitForTimeout(30000);
 });
 `,
